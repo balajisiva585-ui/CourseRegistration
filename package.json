@@ -1,0 +1,26 @@
+{
+  "name": "smart-course-registration-system",
+  "version": "1.0.0",
+  "description": "Smart Course Registration & Academic Planning System",
+  "main": "server/server.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "seed": "npm run seed --prefix server",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "build": "npm run build --prefix client"
+  },
+  "keywords": [
+    "course-registration",
+    "academic-planning",
+    "mern",
+    "timetable",
+    "conflict-detection"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

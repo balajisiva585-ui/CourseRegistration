@@ -1,0 +1,34 @@
+[Database] Attempting connection to MongoDB at: mongodb://127.0.0.1:27017/course_registration_db
+[Database] External MongoDB connection failed (connect ECONNREFUSED 127.0.0.1:27017).
+[Database] Initializing Embedded MongoDB Server (mongodb-memory-server)...
+[Database] Connected to Embedded In-Memory MongoDB instance successfully!
+[Database] Auto-seeding Embedded MongoDB instance...
+--- Starting Database Seeding ---
+--- Initializing Comprehensive Tamil Nadu Engineering Colleges Seed Data ---
+[TNEA Seed] Inserting 15 standard approved engineering disciplines...
+[TNEA Seed] Inserting 13 authentic Tamil Nadu colleges...
+[TNEA Seed] Inserting 510 multi-year cutoff records (2021–2026)...
+[TNEA Seed] Inserting 170 seat matrix records...
+[TNEA Seed] Inserting 2 application notices...
+--- Tamil Nadu Engineering Colleges Comprehensive Seed Data Ready Successfully! ---
+--- Database Seeding Completed Successfully ---
+node:events:505
+    throw er; // Unhandled 'error' event
+    ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5001
+    at Server.setupListenHandle [as _listen2] (node:net:2324:16)
+    at listenInCluster (node:net:2433:12)
+    at node:net:2662:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2412:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5001
+}
+
+Node.js v26.7.0
