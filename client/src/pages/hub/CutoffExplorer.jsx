@@ -13,8 +13,10 @@ import {
   Sparkles,
   Award,
 } from 'lucide-react';
-import tneaService from '../../services/tneaService';
+import tneaService, { getCutoffValue } from '../../services/tneaService';
 import DisclaimerBanner from '../../components/hub/DisclaimerBanner';
+
+export { getCutoffValue };
 
 export const CutoffExplorer = () => {
   const [searchParams] = useSearchParams();
@@ -61,15 +63,21 @@ export const CutoffExplorer = () => {
       setLoading(true);
       try {
         const params = {
-          year,
-          round,
-          community,
           sortBy,
           sortOrder,
           page,
           limit: 25,
         };
 
+        if (year && year !== 'All') {
+          params.academicYear = year;
+          params.year = year;
+        }
+        if (round && round !== 'All') {
+          params.round = round;
+          params.counsellingRound = round === 'Round 1' ? 1 : round === 'Round 2' ? 2 : round === 'Round 3' ? 3 : round;
+        }
+        if (community) params.community = community;
         if (collegeCode) params.collegeCode = collegeCode;
         if (collegeName) params.collegeName = collegeName;
         if (departmentCode !== 'All') params.departmentCode = departmentCode;
@@ -92,8 +100,9 @@ export const CutoffExplorer = () => {
     fetchCutoffsData();
   }, [year, collegeCode, collegeName, departmentCode, round, district, community, minCutoff, maxCutoff, sortBy, sortOrder, page]);
 
-  const formatCutoff = (val) => {
-    if (val === null || val === undefined || isNaN(Number(val))) {
+  const formatCutoff = (row, communityKey) => {
+    const val = getCutoffValue(row, communityKey);
+    if (val === null) {
       return <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.8rem' }}>Unavailable</span>;
     }
     return Number(val).toFixed(2);
@@ -129,13 +138,13 @@ export const CutoffExplorer = () => {
       `"${c.district || ''}"`,
       c.departmentCode,
       c.round || `Round ${c.counsellingRound}`,
-      c.ocCutoff ?? 'Unavailable',
-      c.bcCutoff ?? 'Unavailable',
-      c.bcmCutoff ?? 'Unavailable',
-      c.mbcCutoff ?? 'Unavailable',
-      c.scCutoff ?? 'Unavailable',
-      c.scaCutoff ?? 'Unavailable',
-      c.stCutoff ?? 'Unavailable',
+      getCutoffValue(c, 'OC') !== null ? Number(getCutoffValue(c, 'OC')).toFixed(2) : 'Unavailable',
+      getCutoffValue(c, 'BC') !== null ? Number(getCutoffValue(c, 'BC')).toFixed(2) : 'Unavailable',
+      getCutoffValue(c, 'BCM') !== null ? Number(getCutoffValue(c, 'BCM')).toFixed(2) : 'Unavailable',
+      getCutoffValue(c, 'MBC') !== null ? Number(getCutoffValue(c, 'MBC')).toFixed(2) : 'Unavailable',
+      getCutoffValue(c, 'SC') !== null ? Number(getCutoffValue(c, 'SC')).toFixed(2) : 'Unavailable',
+      getCutoffValue(c, 'SCA') !== null ? Number(getCutoffValue(c, 'SCA')).toFixed(2) : 'Unavailable',
+      getCutoffValue(c, 'ST') !== null ? Number(getCutoffValue(c, 'ST')).toFixed(2) : 'Unavailable',
       c.closingRank ?? '—',
       c.dataStatus || 'OFFICIAL',
     ]);
@@ -488,25 +497,25 @@ export const CutoffExplorer = () => {
                         {row.round || `Round ${row.counsellingRound}`}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'ocCutoff' ? 800 : 600, backgroundColor: community === 'ocCutoff' ? '#eff6ff' : 'transparent', color: community === 'ocCutoff' ? '#1d4ed8' : '#0f172a' }}>
-                        {formatCutoff(row.ocCutoff)}
+                        {formatCutoff(row, 'OC')}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'bcCutoff' ? 800 : 600, backgroundColor: community === 'bcCutoff' ? '#eff6ff' : 'transparent', color: community === 'bcCutoff' ? '#1d4ed8' : '#0f172a' }}>
-                        {formatCutoff(row.bcCutoff)}
+                        {formatCutoff(row, 'BC')}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'bcmCutoff' ? 800 : 600, backgroundColor: community === 'bcmCutoff' ? '#eff6ff' : 'transparent', color: community === 'bcmCutoff' ? '#1d4ed8' : '#0f172a' }}>
-                        {formatCutoff(row.bcmCutoff)}
+                        {formatCutoff(row, 'BCM')}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'mbcCutoff' ? 800 : 600, backgroundColor: community === 'mbcCutoff' ? '#eff6ff' : 'transparent', color: community === 'mbcCutoff' ? '#1d4ed8' : '#0f172a' }}>
-                        {formatCutoff(row.mbcCutoff)}
+                        {formatCutoff(row, 'MBC')}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'scCutoff' ? 800 : 600, backgroundColor: community === 'scCutoff' ? '#eff6ff' : 'transparent', color: community === 'scCutoff' ? '#1d4ed8' : '#0f172a' }}>
-                        {formatCutoff(row.scCutoff)}
+                        {formatCutoff(row, 'SC')}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'scaCutoff' ? 800 : 600, backgroundColor: community === 'scaCutoff' ? '#eff6ff' : 'transparent', color: community === 'scaCutoff' ? '#1d4ed8' : '#0f172a' }}>
-                        {formatCutoff(row.scaCutoff)}
+                        {formatCutoff(row, 'SCA')}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'stCutoff' ? 800 : 600, backgroundColor: community === 'stCutoff' ? '#eff6ff' : 'transparent', color: community === 'stCutoff' ? '#1d4ed8' : '#0f172a' }}>
-                        {formatCutoff(row.stCutoff)}
+                        {formatCutoff(row, 'ST')}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontSize: '0.78rem' }}>
                         {formatRank(row.closingRank)}
@@ -518,12 +527,22 @@ export const CutoffExplorer = () => {
                             fontWeight: 700,
                             padding: '0.2rem 0.45rem',
                             borderRadius: '4px',
-                            backgroundColor: row.dataStatus === 'OFFICIAL' ? '#ecfdf5' : (row.dataStatus === 'PROJECTED' ? '#eff6ff' : '#f1f5f9'),
-                            color: row.dataStatus === 'OFFICIAL' ? '#059669' : (row.dataStatus === 'PROJECTED' ? '#1d4ed8' : '#64748b'),
+                            backgroundColor:
+                              Number(row.academicYear) === 2026 || row.dataStatus === 'PROJECTED'
+                                ? '#eff6ff'
+                                : row.dataStatus === 'OFFICIAL'
+                                ? '#ecfdf5'
+                                : '#f1f5f9',
+                            color:
+                              Number(row.academicYear) === 2026 || row.dataStatus === 'PROJECTED'
+                                ? '#1d4ed8'
+                                : row.dataStatus === 'OFFICIAL'
+                                ? '#059669'
+                                : '#64748b',
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {row.dataStatus || 'OFFICIAL'}
+                          {Number(row.academicYear) === 2026 ? 'PROJECTED' : (row.dataStatus || 'OFFICIAL')}
                         </span>
                       </td>
                     </tr>

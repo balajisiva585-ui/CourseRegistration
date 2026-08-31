@@ -33,7 +33,7 @@ import {
   Lightbulb,
   Check,
 } from 'lucide-react';
-import tneaService from '../../services/tneaService';
+import tneaService, { getCutoffValue } from '../../services/tneaService';
 import { useCompare } from '../../context/CompareContext';
 import { useAuth } from '../../context/AuthContext';
 import SeatProgressBar from '../../components/hub/SeatProgressBar';
@@ -549,8 +549,9 @@ export const CollegeProfile = () => {
                             (c.departmentCode === d.code || c.branchCode === d.code)
                         );
 
-                        const formatCell = (val, isPrimary = false) => {
-                          if (val === null || val === undefined || isNaN(val)) {
+                        const formatCell = (rec, communityKey, isPrimary = false) => {
+                          const val = getCutoffValue(rec, communityKey);
+                          if (val === null) {
                             return <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.8rem' }}>Unavailable</span>;
                           }
                           return (
@@ -565,13 +566,13 @@ export const CollegeProfile = () => {
                             <td style={{ padding: '0.75rem 0.85rem', fontWeight: 800, color: '#0f172a' }}>
                               {d.name} ({d.code})
                             </td>
-                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.ocCutoff, true)}</td>
-                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.bcCutoff)}</td>
-                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.bcmCutoff)}</td>
-                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.mbcCutoff)}</td>
-                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.scCutoff)}</td>
-                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.scaCutoff)}</td>
-                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.stCutoff)}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec, 'OC', true)}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec, 'BC')}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec, 'BCM')}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec, 'MBC')}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec, 'SC')}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec, 'SCA')}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec, 'ST')}</td>
                           </tr>
                         );
                       })}

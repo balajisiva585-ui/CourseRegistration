@@ -1,4 +1,4 @@
-import api from './api';
+import api from './api.js';
 
 export const tneaService = {
   // Colleges
@@ -217,6 +217,56 @@ export const tneaService = {
     const res = await api.get(`/tnea/simulator/share/${shareId}`);
     return res.data;
   },
+};
+
+/**
+ * Robust helper to extract numeric cutoff value for a given community
+ * Priority: direct fields -> nested cutoff.<COMMUNITY>.mark -> case variations
+ */
+export const getCutoffValue = (row, communityKey) => {
+  if (!row) return null;
+
+  const raw = String(communityKey || '').trim();
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  let val = null;
+
+  if (normalized === 'oc' || normalized === 'occutoff') {
+    val = row.ocCutoff ?? row.cutoff?.OC?.mark ?? row.cutoff?.oc?.mark;
+  } else if (normalized === 'bc' || normalized === 'bccutoff') {
+    val = row.bcCutoff ?? row.cutoff?.BC?.mark ?? row.cutoff?.bc?.mark;
+  } else if (normalized === 'bcm' || normalized === 'bcmcutoff') {
+    val = row.bcmCutoff ?? row.cutoff?.BCM?.mark ?? row.cutoff?.bcm?.mark;
+  } else if (
+    normalized === 'mbc' ||
+    normalized === 'mbcdnc' ||
+    normalized === 'mbccutoff' ||
+    normalized === 'mbcdnccutoff' ||
+    normalized === 'mbc_dnc'
+  ) {
+    val =
+      row.mbcCutoff ??
+      row.mbcDncCutoff ??
+      row.cutoff?.MBC_DNC?.mark ??
+      row.cutoff?.MBC?.mark ??
+      row.cutoff?.mbc_dnc?.mark ??
+      row.cutoff?.mbc?.mark;
+  } else if (normalized === 'sc' || normalized === 'sccutoff') {
+    val = row.scCutoff ?? row.cutoff?.SC?.mark ?? row.cutoff?.sc?.mark;
+  } else if (normalized === 'sca' || normalized === 'scacutoff') {
+    val = row.scaCutoff ?? row.cutoff?.SCA?.mark ?? row.cutoff?.sca?.mark;
+  } else if (normalized === 'st' || normalized === 'stcutoff') {
+    val = row.stCutoff ?? row.cutoff?.ST?.mark ?? row.cutoff?.st?.mark;
+  } else if (row[raw] !== undefined) {
+    val = row[raw];
+  }
+
+  if (val === null || val === undefined || val === '' || isNaN(Number(val))) {
+    return null;
+  }
+
+  const num = Number(val);
+  return num > 0 ? num : null;
 };
 
 export default tneaService;
