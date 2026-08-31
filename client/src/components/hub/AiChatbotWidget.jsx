@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getBaseUrl } from '../../services/api';
+
 const getChatApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/+$/, '') + '/tnea';
-  }
-  if (import.meta.env.PROD) {
-    return 'https://course-registration-api-gwk0.onrender.com/api/tnea';
-  }
-  return '/api/tnea';
+  const base = getBaseUrl().replace(/\/+$/, '');
+  return `${base}/tnea`;
 };
 
 const API_BASE_URL = getChatApiBaseUrl();

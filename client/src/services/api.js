@@ -1,17 +1,39 @@
 import axios from 'axios';
 
-// Determine the base API URL:
-// 1. If VITE_API_URL is provided, use it.
-// 2. In production builds (e.g. deployed on Vercel), default to the live Render backend.
-// 3. In local development, default to '/api' (handled by Vite dev server proxy).
-const getBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+// Format and normalize base API URL to ensure it always includes '/api' without duplication
+export const formatBaseApiUrl = (rawUrl) => {
+  // If no environment variable is provided:
+  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+    if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
+      return 'https://course-registration-api-gwk0.onrender.com/api';
+    }
+    return '/api';
   }
-  if (import.meta.env.PROD) {
-    return 'https://course-registration-api-gwk0.onrender.com/api';
+
+  let url = rawUrl.trim();
+
+  // Strip trailing slashes
+  url = url.replace(/\/+$/, '');
+
+  // If it's already exactly '/api' or ends with '/api', keep it
+  if (url === '/api' || url.endsWith('/api')) {
+    return url;
   }
-  return '/api';
+
+  // If it's relative '/' or empty
+  if (url === '') {
+    return '/api';
+  }
+
+  // If it's an absolute or relative path without '/api', append '/api'
+  return `${url}/api`;
+};
+
+export const getBaseUrl = () => {
+  const envUrl =
+    (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_API_URL || import.meta.env?.VITE_API_BASE_URL)) ||
+    '';
+  return formatBaseApiUrl(envUrl);
 };
 
 const api = axios.create({
