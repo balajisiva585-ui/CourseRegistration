@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+const getChatApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, '') + '/tnea';
+  }
+  if (import.meta.env.PROD) {
+    return 'https://course-registration-api-gwk0.onrender.com/api/tnea';
+  }
+  return '/api/tnea';
+};
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/tnea';
-
+const API_BASE_URL = getChatApiBaseUrl();
 export default function AiChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');

@@ -207,11 +207,15 @@ export const SeatMatrixExplorer = () => {
                   backgroundColor: '#ffffff',
                 }}
               >
-                {departmentsList.map((d) => (
-                  <option key={d.code} value={d.code}>
-                    {d.code} - {d.name}
-                  </option>
-                ))}
+                {departmentsList.map((d) => {
+                  const code = d.code || d.departmentCode || d.branchCode || (typeof d === 'string' ? d : '');
+                  const name = d.name || d.departmentName || d.branchName || code;
+                  return (
+                    <option key={code} value={code}>
+                      {code} - {name}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 

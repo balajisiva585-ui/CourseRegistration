@@ -38,19 +38,35 @@ export const CutoffPredictor = () => {
 
   // Load Metadata
   useEffect(() => {
+    let isMounted = true;
     const loadMeta = async () => {
       try {
         const [deptRes, distRes] = await Promise.all([
-          tneaService.getDepartments(),
-          tneaService.getDistricts(),
+          tneaService.getDepartments().catch((e) => {
+            console.error('Failed to fetch departments:', e);
+            return null;
+          }),
+          tneaService.getDistricts().catch((e) => {
+            console.error('Failed to fetch districts:', e);
+            return null;
+          }),
         ]);
-        if (deptRes?.success) setDepartmentsList(deptRes.data);
-        if (distRes?.success) setDistrictsList(distRes.data);
+        if (isMounted) {
+          if (deptRes?.success && Array.isArray(deptRes.data)) {
+            setDepartmentsList(deptRes.data);
+          }
+          if (distRes?.success && Array.isArray(distRes.data)) {
+            setDistrictsList(distRes.data);
+          }
+        }
       } catch (e) {
-        console.error(e);
+        console.error('Failed to load predictor metadata', e);
       }
     };
     loadMeta();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Run prediction on submit or load if query params present
@@ -272,12 +288,14 @@ export const CutoffPredictor = () => {
                   All Branches
                 </button>
                 {departmentsList.map((dept) => {
-                  const active = selectedDepts.includes(dept.code);
+                  const deptCode = dept.code || dept.departmentCode || dept.branchCode || (typeof dept === 'string' ? dept : '');
+                  const deptName = dept.name || dept.departmentName || dept.branchName || deptCode;
+                  const active = selectedDepts.includes(deptCode);
                   return (
                     <button
-                      key={dept.code}
+                      key={deptCode}
                       type="button"
-                      onClick={() => toggleDept(dept.code)}
+                      onClick={() => toggleDept(deptCode)}
                       style={{
                         padding: '0.35rem 0.75rem',
                         borderRadius: '20px',
@@ -290,7 +308,7 @@ export const CutoffPredictor = () => {
                         cursor: 'pointer',
                       }}
                     >
-                      {dept.code} ({dept.name})
+                      {deptCode} ({deptName})
                     </button>
                   );
                 })}
@@ -321,12 +339,13 @@ export const CutoffPredictor = () => {
                   All Tamil Nadu
                 </button>
                 {districtsList.map((d) => {
-                  const active = selectedDistricts.includes(d.name);
+                  const distName = typeof d === 'string' ? d : (d.name || d._id || String(d));
+                  const active = selectedDistricts.includes(distName);
                   return (
                     <button
-                      key={d.name}
+                      key={distName}
                       type="button"
-                      onClick={() => toggleDistrict(d.name)}
+                      onClick={() => toggleDistrict(distName)}
                       style={{
                         padding: '0.35rem 0.75rem',
                         borderRadius: '20px',
@@ -339,7 +358,7 @@ export const CutoffPredictor = () => {
                         cursor: 'pointer',
                       }}
                     >
-                      {d.name}
+                      {distName}
                     </button>
                   );
                 })}

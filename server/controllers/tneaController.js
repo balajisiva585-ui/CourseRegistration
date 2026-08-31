@@ -472,13 +472,30 @@ export const predictCutoff = async (req, res) => {
     // Build query criteria
     const query = {};
     if (preferredDepartments && preferredDepartments.length > 0 && !preferredDepartments.includes('All')) {
-      const depts = Array.isArray(preferredDepartments) ? preferredDepartments : [preferredDepartments];
-      query.departmentCode = { $in: depts.map((d) => d.toUpperCase().trim()) };
+      const depts = (Array.isArray(preferredDepartments) ? preferredDepartments : [preferredDepartments])
+        .filter((d) => d && d !== 'All')
+        .map((d) => d.toUpperCase().trim());
+      if (depts.length > 0) {
+        query.departmentCode = { $in: depts };
+      }
     }
 
     if (preferredDistricts && preferredDistricts.length > 0 && !preferredDistricts.includes('All')) {
-      const dists = Array.isArray(preferredDistricts) ? preferredDistricts : [preferredDistricts];
-      query.district = { $in: dists.map((d) => d.trim()) };
+      const dists = (Array.isArray(preferredDistricts) ? preferredDistricts : [preferredDistricts])
+        .filter((d) => d && d !== 'All')
+        .map((d) => d.trim());
+      if (dists.length > 0) {
+        const distRegexes = dists.map((d) => new RegExp(`^${d}$`, 'i'));
+        const matchingColleges = await TneaCollege.find({ district: { $in: distRegexes } }).select('_id code').lean();
+        const collegeIds = matchingColleges.map((c) => c._id);
+        const collegeCodes = matchingColleges.map((c) => c.code);
+
+        query.$or = [
+          { district: { $in: distRegexes } },
+          { college: { $in: collegeIds } },
+          { collegeCode: { $in: collegeCodes } },
+        ];
+      }
     }
 
     console.log('[PREDICTOR QUERY FILTER]', {
@@ -1272,6 +1289,7 @@ export const getHubAnalytics = async (req, res) => {
 export const getDistricts = async (req, res) => {
   try {
     const districts = await TneaCollege.aggregate([
+      { $match: { district: { $ne: null, $ne: '' } } },
       { $group: { _id: '$district', count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]);
@@ -1281,7 +1299,7 @@ export const getDistricts = async (req, res) => {
       collegeCount: d.count,
     }));
 
-    res.json({ success: true, data: formatted });
+    res.json({ success: true, count: formatted.length, data: formatted });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

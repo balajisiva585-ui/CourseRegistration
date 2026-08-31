@@ -245,11 +245,15 @@ export const CollegeSearch = () => {
                   }}
                 >
                   <option value="All">All Districts</option>
-                  {districtsList.map((d) => (
-                    <option key={d.name} value={d.name}>
-                      {d.name} ({d.collegeCount})
-                    </option>
-                  ))}
+                  {districtsList.map((d) => {
+                    const name = typeof d === 'string' ? d : (d.name || d._id || String(d));
+                    const count = typeof d === 'object' && d.collegeCount !== undefined ? ` (${d.collegeCount})` : '';
+                    return (
+                      <option key={name} value={name}>
+                        {name}{count}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -300,11 +304,15 @@ export const CollegeSearch = () => {
                   }}
                 >
                   <option value="All">All Departments</option>
-                  {departmentsList.map((dept) => (
-                    <option key={dept.code} value={dept.code}>
-                      {dept.code} - {dept.name}
-                    </option>
-                  ))}
+                  {departmentsList.map((dept) => {
+                    const code = dept.code || dept.departmentCode || dept.branchCode || (typeof dept === 'string' ? dept : '');
+                    const name = dept.name || dept.departmentName || dept.branchName || code;
+                    return (
+                      <option key={code} value={code}>
+                        {code} - {name}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

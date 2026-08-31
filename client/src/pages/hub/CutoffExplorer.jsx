@@ -300,11 +300,15 @@ export const CutoffExplorer = () => {
                 style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
               >
                 <option value="All">All Departments</option>
-                {departmentsList.map((d) => (
-                  <option key={d.code} value={d.code}>
-                    {d.code} - {d.name}
-                  </option>
-                ))}
+                {departmentsList.map((d) => {
+                  const code = d.code || d.departmentCode || d.branchCode || (typeof d === 'string' ? d : '');
+                  const name = d.name || d.departmentName || d.branchName || code;
+                  return (
+                    <option key={code} value={code}>
+                      {code} - {name}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -320,11 +324,14 @@ export const CutoffExplorer = () => {
                 style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
               >
                 <option value="All">All Districts</option>
-                {districtsList.map((d) => (
-                  <option key={d.name} value={d.name}>
-                    {d.name}
-                  </option>
-                ))}
+                {districtsList.map((d) => {
+                  const name = typeof d === 'string' ? d : (d.name || d._id || String(d));
+                  return (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
