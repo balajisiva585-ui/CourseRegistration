@@ -6,6 +6,7 @@ import { CompareProvider } from './context/CompareContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Hub Navigation & Layout Components
 import HubNavbar from './components/hub/HubNavbar';
@@ -69,7 +70,9 @@ const HubLayout = () => {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
       <HubNavbar />
       <main style={{ flex: 1 }}>
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <HubFooter />
     </div>
@@ -90,7 +93,9 @@ const AppLayout = () => {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Navbar onToggleSidebar={toggleSidebar} />
         <main style={{ flex: 1, overflowY: 'auto' }}>
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

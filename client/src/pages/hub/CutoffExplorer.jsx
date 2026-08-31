@@ -93,7 +93,9 @@ export const CutoffExplorer = () => {
   }, [year, collegeCode, collegeName, departmentCode, round, district, community, minCutoff, maxCutoff, sortBy, sortOrder, page]);
 
   const formatCutoff = (val) => {
-    if (val === null || val === undefined || isNaN(Number(val))) return 'N/A';
+    if (val === null || val === undefined || isNaN(Number(val))) {
+      return <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.8rem' }}>Unavailable</span>;
+    }
     return Number(val).toFixed(2);
   };
 
@@ -127,15 +129,15 @@ export const CutoffExplorer = () => {
       `"${c.district || ''}"`,
       c.departmentCode,
       c.round || `Round ${c.counsellingRound}`,
-      c.ocCutoff ?? 'N/A',
-      c.bcCutoff ?? 'N/A',
-      c.bcmCutoff ?? 'N/A',
-      c.mbcCutoff ?? 'N/A',
-      c.scCutoff ?? 'N/A',
-      c.scaCutoff ?? 'N/A',
-      c.stCutoff ?? 'N/A',
-      c.closingRank ?? 'N/A',
-      c.dataStatus || 'VERIFIED',
+      c.ocCutoff ?? 'Unavailable',
+      c.bcCutoff ?? 'Unavailable',
+      c.bcmCutoff ?? 'Unavailable',
+      c.mbcCutoff ?? 'Unavailable',
+      c.scCutoff ?? 'Unavailable',
+      c.scaCutoff ?? 'Unavailable',
+      c.stCutoff ?? 'Unavailable',
+      c.closingRank ?? '—',
+      c.dataStatus || 'OFFICIAL',
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
@@ -485,25 +487,25 @@ export const CutoffExplorer = () => {
                       <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontSize: '0.78rem' }}>
                         {row.round || `Round ${row.counsellingRound}`}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 800, backgroundColor: community === 'ocCutoff' ? '#eff6ff' : 'transparent', color: '#1d4ed8' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'ocCutoff' ? 800 : 600, backgroundColor: community === 'ocCutoff' ? '#eff6ff' : 'transparent', color: community === 'ocCutoff' ? '#1d4ed8' : '#0f172a' }}>
                         {formatCutoff(row.ocCutoff)}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'bcCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'bcCutoff' ? 800 : 600, backgroundColor: community === 'bcCutoff' ? '#eff6ff' : 'transparent', color: community === 'bcCutoff' ? '#1d4ed8' : '#0f172a' }}>
                         {formatCutoff(row.bcCutoff)}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'bcmCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'bcmCutoff' ? 800 : 600, backgroundColor: community === 'bcmCutoff' ? '#eff6ff' : 'transparent', color: community === 'bcmCutoff' ? '#1d4ed8' : '#0f172a' }}>
                         {formatCutoff(row.bcmCutoff)}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'mbcCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'mbcCutoff' ? 800 : 600, backgroundColor: community === 'mbcCutoff' ? '#eff6ff' : 'transparent', color: community === 'mbcCutoff' ? '#1d4ed8' : '#0f172a' }}>
                         {formatCutoff(row.mbcCutoff)}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'scCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'scCutoff' ? 800 : 600, backgroundColor: community === 'scCutoff' ? '#eff6ff' : 'transparent', color: community === 'scCutoff' ? '#1d4ed8' : '#0f172a' }}>
                         {formatCutoff(row.scCutoff)}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'scaCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'scaCutoff' ? 800 : 600, backgroundColor: community === 'scaCutoff' ? '#eff6ff' : 'transparent', color: community === 'scaCutoff' ? '#1d4ed8' : '#0f172a' }}>
                         {formatCutoff(row.scaCutoff)}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'stCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: community === 'stCutoff' ? 800 : 600, backgroundColor: community === 'stCutoff' ? '#eff6ff' : 'transparent', color: community === 'stCutoff' ? '#1d4ed8' : '#0f172a' }}>
                         {formatCutoff(row.stCutoff)}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontSize: '0.78rem' }}>
@@ -516,12 +518,12 @@ export const CutoffExplorer = () => {
                             fontWeight: 700,
                             padding: '0.2rem 0.45rem',
                             borderRadius: '4px',
-                            backgroundColor: '#ecfdf5',
-                            color: '#059669',
+                            backgroundColor: row.dataStatus === 'OFFICIAL' ? '#ecfdf5' : (row.dataStatus === 'PROJECTED' ? '#eff6ff' : '#f1f5f9'),
+                            color: row.dataStatus === 'OFFICIAL' ? '#059669' : (row.dataStatus === 'PROJECTED' ? '#1d4ed8' : '#64748b'),
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {row.dataStatus || 'VERIFIED'}
+                          {row.dataStatus || 'OFFICIAL'}
                         </span>
                       </td>
                     </tr>

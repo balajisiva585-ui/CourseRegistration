@@ -11,6 +11,7 @@ import {
   ArrowRight,
   ExternalLink,
   ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import DisclaimerBanner from '../../components/hub/DisclaimerBanner';
 

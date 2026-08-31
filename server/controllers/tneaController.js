@@ -389,6 +389,8 @@ export const getCutoffs = async (req, res) => {
     const sortKey = sortBy === 'cutoff' || sortBy === 'minCutoff' ? communityField : sortBy;
     const sort = {};
     sort[sortKey] = sortOrder === 'asc' ? 1 : -1;
+    sort.collegeCode = 1;
+    sort.departmentCode = 1;
 
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 25;
