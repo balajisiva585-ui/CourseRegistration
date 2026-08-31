@@ -1,7 +1,10 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { seedDatabase } from '../seed/seedData.js';
+import { seedTneaData } from '../seed/tneaSeedData.js';
 import User from '../models/User.js';
+import TneaCollege from '../models/TneaCollege.js';
+import TneaCutoff from '../models/TneaCutoff.js';
 
 let mongoMemoryServer = null;
 
@@ -18,11 +21,17 @@ export const connectDB = async () => {
 
     console.log(`[Database] Connected to external MongoDB host: ${conn.connection.host}`);
     
-    // Check if database needs initial seeding
+    // Check if database needs initial seeding or TNEA dataset sync
     const userCount = await User.countDocuments();
+    const tneaCollegeCount = await TneaCollege.countDocuments();
+    const tneaCutoffCount = await TneaCutoff.countDocuments();
+
     if (userCount === 0) {
       console.log('[Database] Empty database detected. Seeding initial data...');
       await seedDatabase();
+    } else if (tneaCollegeCount < 58 || tneaCutoffCount < 5000) {
+      console.log(`[Database] Partial/outdated TNEA dataset detected in MongoDB (${tneaCollegeCount} colleges, ${tneaCutoffCount} cutoffs). Auto-upgrading to master verified dataset...`);
+      await seedTneaData();
     }
     
     return conn;

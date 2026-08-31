@@ -36,6 +36,7 @@ import {
   getReports,
   updateReportStatus,
   getFees,
+  syncMasterData,
 } from '../controllers/tneaController.js';
 import {
   calculateCutoff,
@@ -70,6 +71,7 @@ router.get('/districts/directory', getDistrictDirectory);
 router.get('/data-sources', getDataSourcesRegistry);
 router.get('/verification-stats', getDataVerificationStats);
 router.post('/colleges/:idOrCode/report', reportIncorrectInfo);
+router.all('/sync-master-data', syncMasterData);
 
 // ==========================================
 // TNEA Allotment Simulator Routes

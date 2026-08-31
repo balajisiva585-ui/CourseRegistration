@@ -1589,5 +1589,35 @@ export const getFees = async (req, res) => {
   }
 };
 
+export const syncMasterData = async (req, res) => {
+  try {
+    const { seedTneaData } = await import('../seed/tneaSeedData.js');
+    await seedTneaData();
+
+    const totalColleges = await TneaCollege.countDocuments();
+    const totalDepartments = await TneaDepartment.countDocuments();
+    const totalCutoffs = await TneaCutoff.countDocuments();
+    const totalSeats = await TneaSeatMatrix.countDocuments();
+    const districts = await TneaCollege.distinct('district');
+
+    res.json({
+      success: true,
+      message: 'Master dataset synchronized successfully.',
+      data: {
+        totalColleges,
+        totalDepartments,
+        totalCutoffs,
+        totalSeats,
+        totalDistricts: districts.length,
+        districts,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
 
 

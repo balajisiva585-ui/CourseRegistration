@@ -13,9 +13,13 @@ export async function importCutoffs() {
   const cutoffsDir = path.join(__dirname, '../data/cutoffs');
   const files = fs.readdirSync(cutoffsDir).filter((f) => f.endsWith('.json'));
 
-  const colleges = await TneaCollege.find({}, '_id code');
+  const colleges = await TneaCollege.find({}, '_id code district');
   const collegeMap = new Map();
-  colleges.forEach((c) => collegeMap.set(c.code, c._id));
+  const collegeDistrictMap = new Map();
+  colleges.forEach((c) => {
+    collegeMap.set(c.code, c._id);
+    if (c.district) collegeDistrictMap.set(c.code, c.district);
+  });
 
   await TneaCutoff.deleteMany({});
   let totalInserted = 0;
@@ -25,7 +29,7 @@ export async function importCutoffs() {
     const enriched = cutoffs.map((item) => ({
       ...item,
       college: collegeMap.get(item.collegeCode) || null,
-      district: item.district || '',
+      district: item.district || collegeDistrictMap.get(item.collegeCode) || '',
     }));
 
     if (enriched.length > 0) {

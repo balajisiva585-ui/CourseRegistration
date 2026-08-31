@@ -143,7 +143,7 @@ const tneaCutoffSchema = new mongoose.Schema(
     },
     dataType: {
       type: String,
-      enum: ['OFFICIAL', 'COLLEGE_OFFICIAL', 'DEMO', 'IMPORTED', 'UNVERIFIED'],
+      enum: ['OFFICIAL', 'COLLEGE_OFFICIAL', 'DEMO', 'IMPORTED', 'UNVERIFIED', 'UNAVAILABLE'],
       default: 'OFFICIAL',
       index: true,
     },
