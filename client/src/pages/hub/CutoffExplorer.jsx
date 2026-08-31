@@ -92,6 +92,16 @@ export const CutoffExplorer = () => {
     fetchCutoffsData();
   }, [year, collegeCode, collegeName, departmentCode, round, district, community, minCutoff, maxCutoff, sortBy, sortOrder, page]);
 
+  const formatCutoff = (val) => {
+    if (val === null || val === undefined || isNaN(Number(val))) return 'N/A';
+    return Number(val).toFixed(2);
+  };
+
+  const formatRank = (val) => {
+    if (val === null || val === undefined || isNaN(Number(val))) return '—';
+    return `#${val}`;
+  };
+
   const handleReset = () => {
     setYear('2025');
     setCollegeCode('');
@@ -109,22 +119,23 @@ export const CutoffExplorer = () => {
 
   const handleExportCSV = () => {
     if (cutoffs.length === 0) return;
-    const headers = ['Academic Year', 'College Code', 'College Name', 'District', 'Department', 'Round', 'OC Cutoff', 'BC Cutoff', 'BCM Cutoff', 'MBC Cutoff', 'SC Cutoff', 'SCA Cutoff', 'ST Cutoff', 'Closing Rank'];
+    const headers = ['Academic Year', 'College Code', 'College Name', 'District', 'Department', 'Round', 'OC Cutoff', 'BC Cutoff', 'BCM Cutoff', 'MBC Cutoff', 'SC Cutoff', 'SCA Cutoff', 'ST Cutoff', 'Closing Rank', 'Data Status'];
     const rows = cutoffs.map((c) => [
       c.academicYear,
       c.collegeCode,
       `"${c.collegeName}"`,
       `"${c.district || ''}"`,
       c.departmentCode,
-      c.round,
-      c.ocCutoff,
-      c.bcCutoff,
-      c.bcmCutoff,
-      c.mbcCutoff,
-      c.scCutoff,
-      c.scaCutoff,
-      c.stCutoff,
-      c.closingRank,
+      c.round || `Round ${c.counsellingRound}`,
+      c.ocCutoff ?? 'N/A',
+      c.bcCutoff ?? 'N/A',
+      c.bcmCutoff ?? 'N/A',
+      c.mbcCutoff ?? 'N/A',
+      c.scCutoff ?? 'N/A',
+      c.scaCutoff ?? 'N/A',
+      c.stCutoff ?? 'N/A',
+      c.closingRank ?? 'N/A',
+      c.dataStatus || 'VERIFIED',
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
@@ -144,7 +155,7 @@ export const CutoffExplorer = () => {
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#059669', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
             <BarChart3 size={18} />
-            <span>TNEA Multi-Year Admissions Dataset</span>
+            <span>TNEA Official Multi-Year Admissions Dataset</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
@@ -152,7 +163,7 @@ export const CutoffExplorer = () => {
                 TNEA Cutoff Dataset Explorer
               </h1>
               <p style={{ fontSize: '0.88rem', color: '#64748b', marginTop: '0.25rem' }}>
-                Search and analyze historical cutoff marks across academic years <strong>2024, 2025, and 2026</strong> for all reservation categories.
+                Search and analyze official historical cutoff marks across academic years <strong>2021 to 2026</strong> across Round 1, Round 2, and Round 3 for all reservation categories.
               </p>
             </div>
 
@@ -200,7 +211,7 @@ export const CutoffExplorer = () => {
         </div>
 
         {/* Disclaimer */}
-        <DisclaimerBanner />
+        <DisclaimerBanner customText="Official historical cutoff records reflect Directorate of Technical Education (DOTE) allotment archives. Seat availability figures reflect demo / simulated estimates for development." />
 
         {/* Filters Box */}
         <div
@@ -252,6 +263,10 @@ export const CutoffExplorer = () => {
                 <option value="2026">2026 (Projected Trends)</option>
                 <option value="2025">2025 (Current Cycle)</option>
                 <option value="2024">2024 (Historical)</option>
+                <option value="2023">2023 (Historical)</option>
+                <option value="2022">2022 (Historical)</option>
+                <option value="2021">2021 (Historical)</option>
+                <option value="All">All Years</option>
               </select>
             </div>
 
@@ -313,6 +328,28 @@ export const CutoffExplorer = () => {
               </select>
             </div>
 
+            {/* Community Filter */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>Community Quota</label>
+              <select
+                value={community}
+                onChange={(e) => {
+                  setCommunity(e.target.value);
+                  setSortBy(e.target.value);
+                  setPage(1);
+                }}
+                style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+              >
+                <option value="ocCutoff">OC (Open Competition)</option>
+                <option value="bcCutoff">BC (Backward Class)</option>
+                <option value="bcmCutoff">BCM (Backward Class Muslim)</option>
+                <option value="mbcCutoff">MBC/DNC (Most Backward Class)</option>
+                <option value="scCutoff">SC (Scheduled Caste)</option>
+                <option value="scaCutoff">SCA (SC Arunthathiyar)</option>
+                <option value="stCutoff">ST (Scheduled Tribe)</option>
+              </select>
+            </div>
+
             {/* College Search / Code */}
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>College Name or Code</label>
@@ -364,8 +401,12 @@ export const CutoffExplorer = () => {
             </div>
           ) : cutoffs.length === 0 ? (
             <div style={{ padding: '3.5rem', textAlign: 'center' }}>
-              <h3>No cutoff records found</h3>
-              <p style={{ color: '#64748b', marginBottom: '1rem' }}>Try adjusting your filter options or clearing search criteria.</p>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                Official cutoff data is not available for this selection.
+              </h3>
+              <p style={{ color: '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                Try another year, round, college, or branch.
+              </p>
               <button
                 onClick={handleReset}
                 style={{
@@ -391,14 +432,15 @@ export const CutoffExplorer = () => {
                     <th style={{ padding: '0.85rem 1rem', textAlign: 'left' }}>College Name</th>
                     <th style={{ padding: '0.85rem 1rem', textAlign: 'left' }}>Branch</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Round</th>
-                    <th style={{ padding: '0.85rem 1rem', backgroundColor: '#1e3a8a', color: '#93c5fd' }}>OC Cutoff</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>BC Cutoff</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>BCM Cutoff</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>MBC/DNC</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>SC Cutoff</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>SCA Cutoff</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>ST Cutoff</th>
+                    <th style={{ padding: '0.85rem 1rem', backgroundColor: community === 'ocCutoff' ? '#1e3a8a' : 'transparent', color: community === 'ocCutoff' ? '#93c5fd' : '#f8fafc' }}>OC Cutoff</th>
+                    <th style={{ padding: '0.85rem 1rem', backgroundColor: community === 'bcCutoff' ? '#1e3a8a' : 'transparent', color: community === 'bcCutoff' ? '#93c5fd' : '#f8fafc' }}>BC Cutoff</th>
+                    <th style={{ padding: '0.85rem 1rem', backgroundColor: community === 'bcmCutoff' ? '#1e3a8a' : 'transparent', color: community === 'bcmCutoff' ? '#93c5fd' : '#f8fafc' }}>BCM Cutoff</th>
+                    <th style={{ padding: '0.85rem 1rem', backgroundColor: community === 'mbcCutoff' ? '#1e3a8a' : 'transparent', color: community === 'mbcCutoff' ? '#93c5fd' : '#f8fafc' }}>MBC/DNC</th>
+                    <th style={{ padding: '0.85rem 1rem', backgroundColor: community === 'scCutoff' ? '#1e3a8a' : 'transparent', color: community === 'scCutoff' ? '#93c5fd' : '#f8fafc' }}>SC Cutoff</th>
+                    <th style={{ padding: '0.85rem 1rem', backgroundColor: community === 'scaCutoff' ? '#1e3a8a' : 'transparent', color: community === 'scaCutoff' ? '#93c5fd' : '#f8fafc' }}>SCA Cutoff</th>
+                    <th style={{ padding: '0.85rem 1rem', backgroundColor: community === 'stCutoff' ? '#1e3a8a' : 'transparent', color: community === 'stCutoff' ? '#93c5fd' : '#f8fafc' }}>ST Cutoff</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Rank</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -433,17 +475,48 @@ export const CutoffExplorer = () => {
                         </span>
                         <span style={{ fontSize: '0.78rem', color: '#475569' }}>{row.departmentName}</span>
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontSize: '0.78rem' }}>{row.round}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 800, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-                        {row.ocCutoff.toFixed(2)}
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontSize: '0.78rem' }}>
+                        {row.round || `Round ${row.counsellingRound}`}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>{row.bcCutoff.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>{row.bcmCutoff.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>{row.mbcCutoff.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>{row.scCutoff.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>{row.scaCutoff.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>{row.stCutoff.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontSize: '0.78rem' }}>#{row.closingRank}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 800, backgroundColor: community === 'ocCutoff' ? '#eff6ff' : 'transparent', color: '#1d4ed8' }}>
+                        {formatCutoff(row.ocCutoff)}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'bcCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                        {formatCutoff(row.bcCutoff)}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'bcmCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                        {formatCutoff(row.bcmCutoff)}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'mbcCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                        {formatCutoff(row.mbcCutoff)}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'scCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                        {formatCutoff(row.scCutoff)}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'scaCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                        {formatCutoff(row.scaCutoff)}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, backgroundColor: community === 'stCutoff' ? '#eff6ff' : 'transparent', color: '#0f172a' }}>
+                        {formatCutoff(row.stCutoff)}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontSize: '0.78rem' }}>
+                        {formatRank(row.closingRank)}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            padding: '0.2rem 0.45rem',
+                            borderRadius: '4px',
+                            backgroundColor: '#ecfdf5',
+                            color: '#059669',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {row.dataStatus || 'VERIFIED'}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

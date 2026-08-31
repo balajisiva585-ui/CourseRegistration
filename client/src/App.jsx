@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar';
 // Hub Navigation & Layout Components
 import HubNavbar from './components/hub/HubNavbar';
 import HubFooter from './components/hub/HubFooter';
+import AiChatbotWidget from './components/hub/AiChatbotWidget';
 
 // Hub Pages
 import HubHome from './pages/hub/HubHome';
@@ -168,6 +169,7 @@ export const App = () => {
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
+          <AiChatbotWidget />
         </CompareProvider>
       </NotificationProvider>
     </AuthProvider>

@@ -35,6 +35,7 @@ import {
   reportIncorrectInfo,
   getReports,
   updateReportStatus,
+  getFees,
 } from '../controllers/tneaController.js';
 import {
   calculateCutoff,
@@ -44,6 +45,7 @@ import {
   getMySimulations,
   getSimulationByShareId,
 } from '../controllers/tneaSimulatorController.js';
+import { handleTneaChat } from '../controllers/tneaChatController.js';
 import { protect, optionalAuth } from '../middleware/auth.js';
 import { authorize } from '../middleware/role.js';
 
@@ -57,7 +59,9 @@ router.get('/colleges/:idOrCode', optionalAuth, getCollegeByIdOrCode);
 router.get('/departments', getDepartments);
 router.get('/cutoffs', getCutoffs);
 router.post('/cutoffs/predict', predictCutoff);
+router.post('/chat', handleTneaChat);
 router.get('/seats', getSeatMatrices);
+router.get('/fees', getFees);
 router.get('/applications', getApplications);
 router.get('/compare', compareColleges);
 router.get('/analytics', getHubAnalytics);

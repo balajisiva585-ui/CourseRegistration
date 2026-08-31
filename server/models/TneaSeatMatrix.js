@@ -62,9 +62,15 @@ const tneaSeatMatrixSchema = new mongoose.Schema(
       default: 2025,
       index: true,
     },
+    counsellingRound: {
+      type: Number,
+      enum: [1, 2, 3, 4],
+      default: 1,
+      index: true,
+    },
     round: {
       type: String,
-      enum: ['Round 1', 'Round 2', 'Round 3', 'Round 4', 'General', 'Final'],
+      enum: ['Round 1', 'Round 2', 'Round 3', 'Round 4', 'General', 'Final', '1', '2', '3'],
       default: 'Round 1',
       index: true,
     },
@@ -95,6 +101,24 @@ const tneaSeatMatrixSchema = new mongoose.Schema(
       default: Date.now,
     },
     // Data Provenance & Source Metadata
+    sourceName: {
+      type: String,
+      default: 'TNEA Directorate of Technical Education (DOTE)',
+    },
+    sourceDocument: {
+      type: String,
+      default: 'DOTE Official Seat Matrix Disclosure',
+    },
+    sourceYear: {
+      type: Number,
+      default: 2025,
+    },
+    dataStatus: {
+      type: String,
+      enum: ['OFFICIAL', 'SOURCE-BACKED', 'PROJECTED', 'ESTIMATED', 'UNAVAILABLE', 'VERIFIED', 'PARTIAL', 'DEMO'],
+      default: 'ESTIMATED',
+      index: true,
+    },
     source: {
       type: String,
       default: 'TNEA Directorate of Technical Education (DOTE)',
@@ -106,7 +130,7 @@ const tneaSeatMatrixSchema = new mongoose.Schema(
     dataType: {
       type: String,
       enum: ['OFFICIAL', 'COLLEGE_OFFICIAL', 'DEMO', 'IMPORTED', 'UNVERIFIED'],
-      default: 'OFFICIAL',
+      default: 'DEMO',
       index: true,
     },
     demoData: {
@@ -116,12 +140,20 @@ const tneaSeatMatrixSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Compound index
-tneaSeatMatrixSchema.index({ collegeCode: 1, departmentCode: 1, academicYear: 1, round: 1, quota: 1 });
-tneaSeatMatrixSchema.index({ academicYear: 1, dataType: 1 });
+// Virtual aliases
+tneaSeatMatrixSchema.virtual('branchCode').get(function () {
+  return this.departmentCode;
+});
+
+// Compound indexes for fast multi-dimensional seat queries
+tneaSeatMatrixSchema.index({ academicYear: 1, counsellingRound: 1, collegeCode: 1, departmentCode: 1, quota: 1 }, { unique: true });
+tneaSeatMatrixSchema.index({ academicYear: 1, counsellingRound: 1, district: 1 });
+tneaSeatMatrixSchema.index({ academicYear: 1, quota: 1 });
 
 const TneaSeatMatrix = mongoose.model('TneaSeatMatrix', tneaSeatMatrixSchema);
 export default TneaSeatMatrix;

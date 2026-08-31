@@ -6,6 +6,11 @@ import TneaApplication from '../models/TneaApplication.js';
 import TneaFavorite from '../models/TneaFavorite.js';
 import TneaSearchAnalytics from '../models/TneaSearchAnalytics.js';
 import TneaReport from '../models/TneaReport.js';
+import TneaFee from '../models/TneaFee.js';
+
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 // ==========================================
 // 1. COLLEGES CONTROLLER
@@ -31,14 +36,15 @@ export const getColleges = async (req, res) => {
     const query = {};
 
     // Keyword Search
-    if (search) {
-      const searchRegex = new RegExp(search.trim(), 'i');
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(escapeRegex(search.trim()), 'i');
       query.$or = [
         { name: searchRegex },
         { shortName: searchRegex },
         { code: searchRegex },
         { district: searchRegex },
         { city: searchRegex },
+        { taluk: searchRegex },
         { 'departments.name': searchRegex },
         { 'departments.departmentCode': searchRegex },
       ];
@@ -46,7 +52,7 @@ export const getColleges = async (req, res) => {
 
     // District filter
     if (district && district !== 'All') {
-      query.district = new RegExp(`^${district}$`, 'i');
+      query.district = new RegExp(`^${escapeRegex(district.trim())}$`, 'i');
     }
 
     // College Type filter
@@ -272,14 +278,26 @@ export const deleteDepartment = async (req, res) => {
 // 3. CUTOFFS & PREDICTOR CONTROLLER
 // ==========================================
 
+export const normalizeRound = (input) => {
+  if (!input || input === 'All' || input === 'ALL' || input === '') return null;
+  const str = String(input).trim().toLowerCase();
+  if (str === '1' || str === 'round 1' || str === 'round1' || str === 'r1') return 1;
+  if (str === '2' || str === 'round 2' || str === 'round2' || str === 'r2') return 2;
+  if (str === '3' || str === 'round 3' || str === 'round3' || str === 'r3') return 3;
+  if (str === '4' || str === 'round 4' || str === 'round4' || str === 'r4') return 4;
+  return null;
+};
+
 export const getCutoffs = async (req, res) => {
   try {
     const {
       year,
+      academicYear,
       collegeCode,
       collegeName,
       departmentCode,
       round,
+      counsellingRound,
       minCutoff,
       maxCutoff,
       district,
@@ -290,25 +308,87 @@ export const getCutoffs = async (req, res) => {
       limit = 25,
     } = req.query;
 
-    const query = {};
+    const andConditions = [];
 
-    if (year) query.academicYear = Number(year);
-    if (collegeCode) query.collegeCode = collegeCode;
-    if (collegeName) query.collegeName = new RegExp(collegeName.trim(), 'i');
-    if (departmentCode && departmentCode !== 'All') query.departmentCode = departmentCode.toUpperCase();
-    if (round && round !== 'All') query.round = round;
-    if (district && district !== 'All') query.district = new RegExp(`^${district}$`, 'i');
-
-    const communityField = community.endsWith('Cutoff') ? community : `${community.toLowerCase()}Cutoff`;
-
-    if (minCutoff || maxCutoff) {
-      query[communityField] = {};
-      if (minCutoff) query[communityField].$gte = Number(minCutoff);
-      if (maxCutoff) query[communityField].$lte = Number(maxCutoff);
+    // Academic Year
+    const effectiveYear = academicYear || year;
+    if (effectiveYear && effectiveYear !== 'All') {
+      andConditions.push({ academicYear: Number(effectiveYear) });
     }
 
+    // Official 4-digit College Code
+    if (collegeCode && collegeCode.trim()) {
+      andConditions.push({ collegeCode: collegeCode.trim() });
+    }
+
+    // Branch / Department Code
+    if (departmentCode && departmentCode !== 'All') {
+      andConditions.push({ departmentCode: departmentCode.toUpperCase() });
+    }
+
+    // Normalised Counselling Round
+    const effectiveRoundInput = counsellingRound || round;
+    const normRound = normalizeRound(effectiveRoundInput);
+    if (normRound !== null) {
+      andConditions.push({
+        $or: [
+          { counsellingRound: normRound },
+          { round: `Round ${normRound}` },
+          { round: String(normRound) },
+        ],
+      });
+    }
+
+    // District Filter
+    if (district && district !== 'All') {
+      andConditions.push({ district: new RegExp(`^${escapeRegex(district.trim())}$`, 'i') });
+    }
+
+    // Global Multi-field College / Code / Department search
+    if (collegeName && collegeName.trim()) {
+      const termRegex = new RegExp(escapeRegex(collegeName.trim()), 'i');
+      if (!collegeCode) {
+        andConditions.push({
+          $or: [
+            { collegeName: termRegex },
+            { collegeCode: termRegex },
+            { district: termRegex },
+            { departmentName: termRegex },
+            { departmentCode: termRegex },
+          ],
+        });
+      } else {
+        andConditions.push({ collegeName: termRegex });
+      }
+    }
+
+    // Community Field Mapping
+    let communityField = 'ocCutoff';
+    if (community) {
+      const c = community.trim();
+      if (c === 'OC' || c === 'ocCutoff') communityField = 'ocCutoff';
+      else if (c === 'BC' || c === 'bcCutoff') communityField = 'bcCutoff';
+      else if (c === 'BCM' || c === 'bcmCutoff') communityField = 'bcmCutoff';
+      else if (c === 'MBC' || c === 'MBC/DNC' || c === 'MBCDNC' || c === 'MBC_DNC' || c === 'mbcCutoff') communityField = 'mbcCutoff';
+      else if (c === 'SC' || c === 'scCutoff') communityField = 'scCutoff';
+      else if (c === 'SCA' || c === 'scaCutoff') communityField = 'scaCutoff';
+      else if (c === 'ST' || c === 'stCutoff') communityField = 'stCutoff';
+      else if (c.endsWith('Cutoff')) communityField = c;
+    }
+
+    // Min & Max Cutoff range on active community
+    if (minCutoff !== undefined && minCutoff !== '' && !isNaN(Number(minCutoff))) {
+      andConditions.push({ [communityField]: { $gte: Number(minCutoff) } });
+    }
+    if (maxCutoff !== undefined && maxCutoff !== '' && !isNaN(Number(maxCutoff))) {
+      andConditions.push({ [communityField]: { $lte: Number(maxCutoff) } });
+    }
+
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
+
+    const sortKey = sortBy === 'cutoff' || sortBy === 'minCutoff' ? communityField : sortBy;
     const sort = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    sort[sortKey] = sortOrder === 'asc' ? 1 : -1;
 
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 25;
@@ -320,6 +400,10 @@ export const getCutoffs = async (req, res) => {
       .skip(skip)
       .limit(limitNum)
       .populate('college', 'collegeType isAutonomous accreditation logo bannerImage district');
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[CUTOFF QUERY] year: ${effectiveYear || 'ALL'}, round: ${effectiveRoundInput || 'ALL'} (norm: ${normRound || 'ALL'}), college: ${collegeName || collegeCode || 'ALL'}, district: ${district || 'ALL'}, department: ${departmentCode || 'ALL'}, community: ${communityField}, minCutoff: ${minCutoff || 'NONE'} | DB Matches: ${totalCount}, Returned: ${cutoffs.length}`);
+    }
 
     res.json({
       success: true,
@@ -336,17 +420,45 @@ export const getCutoffs = async (req, res) => {
   }
 };
 
+// Extract specific community cutoff without fallback substitution
+export const extractCategoryCutoff = (record, community) => {
+  if (!record) return null;
+  const comm = (community || 'OC').toUpperCase().trim();
+  let val = null;
+  if (comm === 'OC') {
+    val = record.ocCutoff ?? record.cutoff?.OC?.mark ?? record.cutoff?.OC ?? record.cutoff?.oc;
+  } else if (comm === 'BC') {
+    val = record.bcCutoff ?? record.cutoff?.BC?.mark ?? record.cutoff?.BC ?? record.cutoff?.bc;
+  } else if (comm === 'BCM') {
+    val = record.bcmCutoff ?? record.cutoff?.BCM?.mark ?? record.cutoff?.BCM ?? record.cutoff?.bcm;
+  } else if (comm === 'MBC' || comm === 'MBC/DNC' || comm === 'MBCDNC' || comm === 'MBC_DNC') {
+    val = record.mbcCutoff ?? record.mbcDncCutoff ?? record.cutoff?.MBC_DNC?.mark ?? record.cutoff?.MBC_DNC ?? record.cutoff?.MBC?.mark ?? record.cutoff?.MBC ?? record.cutoff?.mbc;
+  } else if (comm === 'SC') {
+    val = record.scCutoff ?? record.cutoff?.SC?.mark ?? record.cutoff?.SC ?? record.cutoff?.sc;
+  } else if (comm === 'SCA') {
+    val = record.scaCutoff ?? record.cutoff?.SCA?.mark ?? record.cutoff?.SCA ?? record.cutoff?.sca;
+  } else if (comm === 'ST') {
+    val = record.stCutoff ?? record.cutoff?.ST?.mark ?? record.cutoff?.ST ?? record.cutoff?.st;
+  }
+
+  if (val === null || val === undefined || isNaN(val)) return null;
+  return Number(val);
+};
+
 export const predictCutoff = async (req, res) => {
   try {
     const {
       cutoffMark,
+      cutoff,
+      cutoffScore,
       community = 'OC',
       preferredDepartments = [],
       preferredDistricts = [],
       academicYear = 2025,
+      quota = 'Government',
     } = req.body;
 
-    const score = Number(cutoffMark);
+    const score = Number(cutoffMark ?? cutoff ?? cutoffScore);
     if (!score || score < 50 || score > 200) {
       return res.status(400).json({
         success: false,
@@ -354,95 +466,238 @@ export const predictCutoff = async (req, res) => {
       });
     }
 
-    // Map community to field name
-    const communityKeyMap = {
-      OC: 'ocCutoff',
-      BC: 'bcCutoff',
-      BCM: 'bcmCutoff',
-      MBC: 'mbcCutoff',
-      'MBC/DNC': 'mbcCutoff',
-      SC: 'scCutoff',
-      SCA: 'scaCutoff',
-      ST: 'stCutoff',
-    };
+    const normCommunity = (community || 'OC').toUpperCase().trim();
+    const targetYear = Number(academicYear) || 2025;
 
-    const targetField = communityKeyMap[community.toUpperCase()] || 'ocCutoff';
-
-    const query = {
-      academicYear: Number(academicYear),
-      round: 'Round 1',
-    };
-
+    // Build query criteria
+    const query = {};
     if (preferredDepartments && preferredDepartments.length > 0 && !preferredDepartments.includes('All')) {
-      query.departmentCode = { $in: preferredDepartments.map((d) => d.toUpperCase()) };
+      const depts = Array.isArray(preferredDepartments) ? preferredDepartments : [preferredDepartments];
+      query.departmentCode = { $in: depts.map((d) => d.toUpperCase().trim()) };
     }
 
     if (preferredDistricts && preferredDistricts.length > 0 && !preferredDistricts.includes('All')) {
-      query.district = { $in: preferredDistricts };
+      const dists = Array.isArray(preferredDistricts) ? preferredDistricts : [preferredDistricts];
+      query.district = { $in: dists.map((d) => d.trim()) };
     }
 
-    // Fetch all cutoff records matching criteria
-    const cutoffRecords = await TneaCutoff.find(query).populate(
-      'college',
-      'collegeType isAutonomous accreditation placements logo district'
-    );
-
-    const goodChance = [];
-    const moderateChance = [];
-    const lowChance = [];
-
-    cutoffRecords.forEach((record) => {
-      const requiredCutoff = record[targetField] || record.ocCutoff;
-      const difference = +(score - requiredCutoff).toFixed(2);
-
-      const predictionItem = {
-        cutoffId: record._id,
-        collegeId: record.college?._id,
-        collegeCode: record.collegeCode,
-        collegeName: record.collegeName,
-        district: record.district,
-        departmentCode: record.departmentCode,
-        departmentName: record.departmentName,
-        historicalCutoff: requiredCutoff,
-        studentCutoff: score,
-        difference: difference,
-        community: community,
-        academicYear: record.academicYear,
-        collegeType: record.college?.collegeType,
-        isAutonomous: record.college?.isAutonomous,
-        placementPercentage: record.college?.placements?.placementPercentage,
-        logo: record.college?.logo,
-      };
-
-      if (difference >= 1.5) {
-        // High probability / Safe zone
-        predictionItem.chanceTier = 'Good Chance';
-        predictionItem.chanceDescription = `Cutoff is ${Math.abs(difference)} marks above historical closing score. High admission probability.`;
-        goodChance.push(predictionItem);
-      } else if (difference >= -2.0 && difference < 1.5) {
-        // Competitive / Target zone
-        predictionItem.chanceTier = 'Moderate Chance';
-        predictionItem.chanceDescription = `Cutoff is within close competitive range (diff: ${difference >= 0 ? '+' : ''}${difference}). Strong target choice.`;
-        moderateChance.push(predictionItem);
-      } else if (difference >= -6.0 && difference < -2.0) {
-        // Dream / Reach zone
-        predictionItem.chanceTier = 'Low Chance';
-        predictionItem.chanceDescription = `Cutoff is ${Math.abs(difference)} marks below historical score. Can be kept as ambitious reach choice.`;
-        lowChance.push(predictionItem);
-      }
+    console.log('[PREDICTOR QUERY FILTER]', {
+      cutoffMark: score,
+      community: normCommunity,
+      academicYear: targetYear,
+      preferredDepartments,
+      preferredDistricts,
+      mongoFilter: query,
     });
 
-    // Sort within each category by proximity
-    goodChance.sort((a, b) => b.difference - a.difference);
-    moderateChance.sort((a, b) => b.difference - a.difference);
-    lowChance.sort((a, b) => b.difference - a.difference);
+    // Fetch all cutoff records matching department and district across years & rounds
+    const allRecords = await TneaCutoff.find(query)
+      .populate('college', 'code name shortName district collegeType isAutonomous accreditation placements logo bannerImage')
+      .lean();
 
-    // Track analytics
+    // Group records by unique collegeCode + departmentCode
+    const comboMap = new Map();
+    for (const record of allRecords) {
+      const key = `${record.collegeCode}__${record.departmentCode}`;
+      if (!comboMap.has(key)) {
+        comboMap.set(key, []);
+      }
+      comboMap.get(key).push(record);
+    }
+
+    const safeList = [];
+    const targetList = [];
+    const reachList = [];
+
+    for (const [key, records] of comboMap.entries()) {
+      // 1. Extract category cutoffs across all years and rounds strictly for the requested community
+      const categoryEntries = [];
+      for (const rec of records) {
+        const catVal = extractCategoryCutoff(rec, normCommunity);
+        if (catVal !== null && !isNaN(catVal)) {
+          categoryEntries.push({
+            year: rec.academicYear,
+            round: rec.counsellingRound || (rec.round === 'Round 2' ? 2 : (rec.round === 'Round 3' ? 3 : 1)),
+            roundName: rec.round || `Round ${rec.counsellingRound || 1}`,
+            cutoff: catVal,
+            record: rec,
+          });
+        }
+      }
+
+      // If no cutoff record exists for this specific category, do NOT silently use another category
+      if (categoryEntries.length === 0) {
+        continue;
+      }
+
+      // Representative record for metadata
+      const baseRec = records.find((r) => r.academicYear === targetYear) || records[0];
+      const collegeObj = baseRec.college;
+
+      // 2. Identify target year round-wise cutoffs (or fallback to latest available year)
+      let yearEntries = categoryEntries.filter((e) => e.year === targetYear);
+      let isHistoricalFallback = false;
+      if (yearEntries.length === 0) {
+        const availableYears = [...new Set(categoryEntries.map((e) => e.year))].sort((a, b) => b - a);
+        const fallbackYear = availableYears[0];
+        yearEntries = categoryEntries.filter((e) => e.year === fallbackYear);
+        isHistoricalFallback = true;
+      }
+
+      const r1Entry = yearEntries.find((e) => e.round === 1);
+      const r2Entry = yearEntries.find((e) => e.round === 2);
+      const r3Entry = yearEntries.find((e) => e.round === 3);
+
+      const r1Cutoff = r1Entry ? r1Entry.cutoff : null;
+      const r2Cutoff = r2Entry ? r2Entry.cutoff : null;
+      const r3Cutoff = r3Entry ? r3Entry.cutoff : null;
+
+      // 3. Determine best counselling round based on student's score
+      let bestRound = 'Round 1';
+      let benchmarkCutoff = r1Cutoff;
+
+      if (r1Cutoff !== null && score >= r1Cutoff - 1.5) {
+        bestRound = 'Round 1';
+        benchmarkCutoff = r1Cutoff;
+      } else if (r2Cutoff !== null && score >= r2Cutoff - 1.5) {
+        bestRound = 'Round 2';
+        benchmarkCutoff = r2Cutoff;
+      } else if (r3Cutoff !== null && score >= r3Cutoff - 2.0) {
+        bestRound = 'Round 3';
+        benchmarkCutoff = r3Cutoff;
+      } else {
+        // Find the lowest round cutoff available
+        if (r3Cutoff !== null) {
+          bestRound = 'Round 3';
+          benchmarkCutoff = r3Cutoff;
+        } else if (r2Cutoff !== null) {
+          bestRound = 'Round 2';
+          benchmarkCutoff = r2Cutoff;
+        } else if (r1Cutoff !== null) {
+          bestRound = 'Round 1';
+          benchmarkCutoff = r1Cutoff;
+        } else {
+          benchmarkCutoff = categoryEntries[0].cutoff;
+        }
+      }
+
+      // Log matched record for validation
+      console.log('[PREDICTOR MATCH]', {
+        collegeCode: baseRec.collegeCode,
+        departmentCode: baseRec.departmentCode,
+        community: normCommunity,
+        academicYear: targetYear,
+        round: bestRound,
+        matchedCutoff: benchmarkCutoff,
+      });
+
+      // 4. Calculate multi-year historical trend & range
+      const allCutoffValues = categoryEntries.map((e) => e.cutoff);
+      const minCutoff = allCutoffValues.length > 0 ? Math.min(...allCutoffValues) : null;
+      const maxCutoff = allCutoffValues.length > 0 ? Math.max(...allCutoffValues) : null;
+      const avgCutoff = allCutoffValues.length > 0 ? +(allCutoffValues.reduce((a, b) => a + b, 0) / allCutoffValues.length).toFixed(2) : null;
+
+      // Trend: compare recent year Round 1 with earlier year Round 1 (or available records)
+      const sortedByYearR1 = categoryEntries.filter((e) => e.round === 1).sort((a, b) => a.year - b.year);
+      let trendDelta = 0;
+      let trendLabel = 'Insufficient verified data';
+      if (sortedByYearR1.length >= 2) {
+        const oldest = sortedByYearR1[0].cutoff;
+        const newest = sortedByYearR1[sortedByYearR1.length - 1].cutoff;
+        trendDelta = +(newest - oldest).toFixed(2);
+        if (trendDelta > 0.3) trendLabel = `Increasing (+${trendDelta.toFixed(2)})`;
+        else if (trendDelta < -0.3) trendLabel = `Decreasing (${trendDelta.toFixed(2)})`;
+        else trendLabel = `Stable (±${Math.abs(trendDelta).toFixed(2)})`;
+      }
+
+      // 5. Compare student's score against historical benchmark
+      const difference = benchmarkCutoff !== null ? +(score - benchmarkCutoff).toFixed(2) : null;
+
+      const predictionItem = {
+        cutoffId: baseRec._id,
+        collegeId: collegeObj?._id,
+        collegeCode: baseRec.collegeCode,
+        collegeName: baseRec.collegeName,
+        shortName: collegeObj?.shortName || baseRec.collegeName,
+        district: baseRec.district,
+        departmentCode: baseRec.departmentCode,
+        departmentName: baseRec.departmentName,
+        selectedCategory: normCommunity,
+        community: normCommunity,
+        studentCutoff: score,
+        historicalCutoff: benchmarkCutoff,
+        benchmarkRound: bestRound,
+        bestCounsellingRound: bestRound,
+        round1Cutoff: r1Cutoff,
+        round2Cutoff: r2Cutoff,
+        round3Cutoff: r3Cutoff,
+        expectedCutoffRange: {
+          min: minCutoff,
+          max: maxCutoff,
+          average: avgCutoff,
+          display: minCutoff !== null && maxCutoff !== null ? `${minCutoff.toFixed(2)} - ${maxCutoff.toFixed(2)}` : 'Official value unavailable',
+        },
+        historicalCutoffTrend: trendLabel,
+        isHistoricalFallback,
+        academicYear: targetYear,
+        difference: difference,
+        collegeType: collegeObj?.collegeType || 'Affiliated',
+        isAutonomous: collegeObj?.isAutonomous || false,
+        placementPercentage: collegeObj?.placements?.placementPercentage || 85,
+        logo: collegeObj?.logo || '',
+        bannerImage: collegeObj?.bannerImage || '',
+      };
+
+      if (benchmarkCutoff === null) {
+        predictionItem.historicalCutoff = null;
+        predictionItem.expectedCutoffRange = { min: null, max: null, average: null, display: 'Official value unavailable' };
+        predictionItem.historicalCutoffTrend = 'Insufficient verified data';
+        predictionItem.bestCounsellingRound = 'Unavailable';
+        predictionItem.dataStatus = 'UNAVAILABLE';
+        continue;
+      }
+
+      // 6. Classification into SAFE, TARGET, REACH tiers
+      if (difference >= 1.5) {
+        // SAFE: Student cutoff is comfortably above historical closing score
+        predictionItem.admissionChance = 'SAFE';
+        predictionItem.chanceTier = 'Good Chance';
+        predictionItem.chanceDescription = `Cutoff is ${Math.abs(difference).toFixed(2)} marks comfortably above historical ${normCommunity} closing score (${benchmarkCutoff.toFixed(2)}) in ${bestRound}. High admission probability.`;
+        predictionItem.recommendationReason = `Your score of ${score.toFixed(2)} is ${difference.toFixed(2)} marks above the historical ${normCommunity} closing score of ${benchmarkCutoff.toFixed(2)} in ${bestRound}.`;
+        safeList.push(predictionItem);
+      } else if (difference >= -2.0 && difference < 1.5) {
+        // TARGET: Student cutoff is close to historical closing score and realistic
+        predictionItem.admissionChance = 'TARGET';
+        predictionItem.chanceTier = 'Moderate Chance';
+        predictionItem.chanceDescription = `Cutoff is within competitive proximity (${difference >= 0 ? '+' : ''}${difference.toFixed(2)} marks) of historical ${normCommunity} cutoff (${benchmarkCutoff.toFixed(2)}) in ${bestRound}. Strong target choice.`;
+        predictionItem.recommendationReason = `Your score of ${score.toFixed(2)} is within close competitive proximity (${difference >= 0 ? '+' : ''}${difference.toFixed(2)}) of the historical ${normCommunity} closing score (${benchmarkCutoff.toFixed(2)}) in ${bestRound}.`;
+        targetList.push(predictionItem);
+      } else if (difference >= -6.0 && difference < -2.0) {
+        // REACH: Student cutoff is below closing cutoff but round movement suggests a realistic possibility
+        predictionItem.admissionChance = 'REACH';
+        predictionItem.chanceTier = 'Low Chance';
+        predictionItem.chanceDescription = `Cutoff is ${Math.abs(difference).toFixed(2)} marks below historical ${normCommunity} score (${benchmarkCutoff.toFixed(2)}), but feasible as an ambitious reach choice in ${bestRound}.`;
+        predictionItem.recommendationReason = `Your score of ${score.toFixed(2)} is ${Math.abs(difference).toFixed(2)} marks below historical ${normCommunity} cutoff (${benchmarkCutoff.toFixed(2)}), but accessible as an ambitious choice in ${bestRound}.`;
+        reachList.push(predictionItem);
+      }
+    }
+
+    // 7. Sort within each tier
+    // SAFE: highest safety margin first
+    safeList.sort((a, b) => b.difference - a.difference);
+    // TARGET: closest proximity to 0 difference first
+    targetList.sort((a, b) => Math.abs(a.difference) - Math.abs(b.difference));
+    // REACH: closest reach (lowest negative difference) first
+    reachList.sort((a, b) => b.difference - a.difference);
+
+    const allRecommendations = [...safeList, ...targetList, ...reachList];
+
+    // Track analytics asynchronously
     TneaSearchAnalytics.create({
-      query: `${score} | ${community}`,
+      query: `${score} | ${normCommunity}`,
       searchType: 'PREDICTOR',
-      district: preferredDistricts.join(','),
-      department: preferredDepartments.join(','),
+      district: Array.isArray(preferredDistricts) ? preferredDistricts.join(',') : preferredDistricts,
+      department: Array.isArray(preferredDepartments) ? preferredDepartments.join(',') : preferredDepartments,
     }).catch(() => {});
 
     res.json({
@@ -450,16 +705,32 @@ export const predictCutoff = async (req, res) => {
       disclaimer: 'This is an estimate based on historical cutoff data and does not guarantee admission.',
       summary: {
         studentCutoff: score,
-        community: community,
-        totalEvaluated: cutoffRecords.length,
-        goodChanceCount: goodChance.length,
-        moderateChanceCount: moderateChance.length,
-        lowChanceCount: lowChance.length,
+        community: normCommunity,
+        academicYear: targetYear,
+        totalEvaluated: comboMap.size,
+        safeCount: safeList.length,
+        targetCount: targetList.length,
+        reachCount: reachList.length,
+        goodChanceCount: safeList.length,
+        moderateChanceCount: targetList.length,
+        lowChanceCount: reachList.length,
       },
       results: {
-        goodChance,
-        moderateChance,
-        lowChance,
+        safe: safeList,
+        target: targetList,
+        reach: reachList,
+        goodChance: safeList,
+        moderateChance: targetList,
+        lowChance: reachList,
+      },
+      data: {
+        safe: safeList,
+        target: targetList,
+        reach: reachList,
+        goodChance: safeList,
+        moderateChance: targetList,
+        lowChance: reachList,
+        allRecommendations,
       },
     });
   } catch (error) {
@@ -591,24 +862,66 @@ export const getSeatMatrices = async (req, res) => {
       collegeCode,
       departmentCode,
       academicYear = 2025,
-      round = 'Round 1',
-      quota = 'Government',
+      round,
+      counsellingRound,
+      quota,
       district,
       page = 1,
-      limit = 30,
+      limit = 50,
     } = req.query;
 
-    const query = {};
+    const andConditions = [];
 
-    if (academicYear) query.academicYear = Number(academicYear);
-    if (round && round !== 'All') query.round = round;
-    if (quota && quota !== 'All' && quota !== 'Overall') query.quota = quota;
-    if (collegeCode) query.collegeCode = collegeCode;
-    if (departmentCode && departmentCode !== 'All') query.departmentCode = departmentCode.toUpperCase();
-    if (district && district !== 'All') query.district = new RegExp(`^${district}$`, 'i');
+    // Academic Year
+    if (academicYear && academicYear !== 'All') {
+      const yearNum = parseInt(String(academicYear), 10);
+      if (!isNaN(yearNum)) andConditions.push({ academicYear: yearNum });
+    }
+
+    // College Code
+    if (collegeCode && collegeCode.trim()) {
+      andConditions.push({ collegeCode: collegeCode.trim() });
+    }
+
+    // Department Code
+    if (departmentCode && departmentCode !== 'All') {
+      andConditions.push({ departmentCode: departmentCode.toUpperCase().trim() });
+    }
+
+    // Normalised Counselling Round
+    const effectiveRoundInput = counsellingRound || round;
+    const normRound = normalizeRound(effectiveRoundInput);
+    if (normRound !== null) {
+      andConditions.push({
+        $or: [
+          { counsellingRound: normRound },
+          { round: `Round ${normRound}` },
+          { round: String(normRound) },
+        ],
+      });
+    }
+
+    // Admission Quota Normalization
+    if (quota && quota !== 'All' && quota !== 'Overall') {
+      const qLower = quota.trim().toLowerCase();
+      if (qLower.includes('gov') || qLower.includes('tnea')) {
+        andConditions.push({ quota: 'Government' });
+      } else if (qLower.includes('mgmt') || qLower.includes('management')) {
+        andConditions.push({ quota: 'Management' });
+      } else {
+        andConditions.push({ quota: quota.trim() });
+      }
+    }
+
+    // District
+    if (district && district !== 'All') {
+      andConditions.push({ district: new RegExp(`^${escapeRegex(district.trim())}$`, 'i') });
+    }
+
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
     const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 30;
+    const limitNum = parseInt(limit, 10) || 50;
     const skip = (pageNum - 1) * limitNum;
 
     const totalCount = await TneaSeatMatrix.countDocuments(query);
@@ -617,6 +930,10 @@ export const getSeatMatrices = async (req, res) => {
       .skip(skip)
       .limit(limitNum)
       .populate('college', 'collegeType isAutonomous accreditation logo district bannerImage');
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[SEAT MATRIX QUERY] College: ${collegeCode || 'ALL'}, Dept: ${departmentCode || 'ALL'}, Year: ${academicYear || 'ALL'}, Round: ${effectiveRoundInput || 'ALL'} (norm: ${normRound || 'ALL'}), Quota: ${quota || 'ALL'} | DB Matches: ${totalCount}`);
+    }
 
     res.json({
       success: true,
@@ -1239,5 +1556,20 @@ export const updateReportStatus = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getFees = async (req, res) => {
+  try {
+    const { collegeCode, academicYear = 2025 } = req.query;
+    const query = {};
+    if (collegeCode) query.collegeCode = collegeCode;
+    if (academicYear) query.academicYear = Number(academicYear);
+
+    const fees = await TneaFee.find(query);
+    res.json({ success: true, data: fees });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
 

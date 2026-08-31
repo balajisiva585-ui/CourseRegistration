@@ -40,7 +40,7 @@ export const SeatMatrixExplorer = () => {
     const loadDropdownData = async () => {
       try {
         const [collegesRes, deptRes] = await Promise.all([
-          tneaService.getColleges({ limit: 50 }),
+          tneaService.getColleges({ limit: 100 }),
           tneaService.getDepartments(),
         ]);
 
@@ -67,15 +67,20 @@ export const SeatMatrixExplorer = () => {
         });
 
         if (res?.success) {
-          setAllSeatsForCollege(res.data);
+          setAllSeatsForCollege(res.data || []);
           setLastUpdated(res.lastUpdated || new Date());
 
           // Find specific department or default to first
-          const found = res.data.find((s) => s.departmentCode === selectedDeptCode) || res.data[0];
+          const found = (res.data || []).find((s) => s.departmentCode === selectedDeptCode) || (res.data || [])[0];
           setSeatMatrix(found || null);
+        } else {
+          setSeatMatrix(null);
+          setAllSeatsForCollege([]);
         }
       } catch (err) {
         console.error('Failed to load seat matrix', err);
+        setSeatMatrix(null);
+        setAllSeatsForCollege([]);
       } finally {
         setLoading(false);
       }
@@ -228,6 +233,7 @@ export const SeatMatrixExplorer = () => {
                   backgroundColor: '#ffffff',
                 }}
               >
+                <option value={2026}>2026 - 2027 (Projected Intake)</option>
                 <option value={2025}>2025 - 2026 (Active Matrix)</option>
                 <option value={2024}>2024 - 2025 (Historical Reference)</option>
               </select>

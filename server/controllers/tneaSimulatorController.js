@@ -5,8 +5,9 @@ import TneaSeatMatrix from '../models/TneaSeatMatrix.js';
 import TneaSimulation from '../models/TneaSimulation.js';
 
 // Map community code to model field
-const getCutoffField = (community) => {
-  switch (community) {
+export const getCutoffField = (community) => {
+  const comm = (community || 'OC').toUpperCase().trim();
+  switch (comm) {
     case 'OC':
       return 'ocCutoff';
     case 'BC':
@@ -15,6 +16,7 @@ const getCutoffField = (community) => {
       return 'bcmCutoff';
     case 'MBC/DNC':
     case 'MBC':
+    case 'MBCDNC':
       return 'mbcCutoff';
     case 'SC':
       return 'scCutoff';
@@ -25,6 +27,22 @@ const getCutoffField = (community) => {
     default:
       return 'ocCutoff';
   }
+};
+
+export const getCommunityCutoff = (record, community) => {
+  if (!record) return null;
+  const comm = (community || 'OC').toUpperCase().trim();
+  let val = null;
+  if (comm === 'OC') val = record.ocCutoff ?? record.cutoff?.oc;
+  else if (comm === 'BC') val = record.bcCutoff ?? record.cutoff?.bc;
+  else if (comm === 'BCM') val = record.bcmCutoff ?? record.cutoff?.bcm;
+  else if (comm === 'MBC' || comm === 'MBC/DNC' || comm === 'MBCDNC') val = record.mbcCutoff ?? record.cutoff?.mbc;
+  else if (comm === 'SC') val = record.scCutoff ?? record.cutoff?.sc;
+  else if (comm === 'SCA') val = record.scaCutoff ?? record.cutoff?.sca;
+  else if (comm === 'ST') val = record.stCutoff ?? record.cutoff?.st;
+
+  if (val === null || val === undefined || isNaN(val)) return null;
+  return Number(val);
 };
 
 /**
@@ -79,12 +97,12 @@ export const getSmartSuggestions = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Valid cutoff between 50 and 200 is required.' });
     }
 
-    const cutoffField = getCutoffField(community);
+    const normCommunity = (community || 'BC').toUpperCase().trim();
 
     // Build query filters
     const query = { academicYear: Number(academicYear), round: 'Round 1' };
-    if (preferredBranches.length > 0) query.departmentCode = { $in: preferredBranches };
-    if (preferredDistricts.length > 0) query.district = { $in: preferredDistricts };
+    if (preferredBranches.length > 0 && !preferredBranches.includes('All')) query.departmentCode = { $in: preferredBranches };
+    if (preferredDistricts.length > 0 && !preferredDistricts.includes('All')) query.district = { $in: preferredDistricts };
 
     const cutoffs = await TneaCutoff.find(query)
       .populate('college', 'code name shortName district collegeType isAutonomous accreditation placements logo')
@@ -95,7 +113,9 @@ export const getSmartSuggestions = async (req, res, next) => {
     const dreamChoices = [];
 
     for (const c of cutoffs) {
-      const historicalCutoff = c[cutoffField] || c.ocCutoff;
+      const historicalCutoff = getCommunityCutoff(c, normCommunity);
+      if (historicalCutoff === null) continue;
+
       const diff = +(studentCutoff - historicalCutoff).toFixed(2);
 
       const item = {
@@ -110,24 +130,24 @@ export const getSmartSuggestions = async (req, res, next) => {
         historicalCutoff,
         studentCutoff,
         difference: diff,
-        community,
+        community: normCommunity,
         placementPercentage: c.college?.placements?.placementPercentage || 85,
         logo: c.college?.logo,
       };
 
-      if (diff >= 2.0) {
-        safeChoices.push({ ...item, category: 'Safe', badgeColor: '#059669' });
-      } else if (diff >= -2.0 && diff < 2.0) {
-        targetChoices.push({ ...item, category: 'Target', badgeColor: '#2563eb' });
+      if (diff >= 1.5) {
+        safeChoices.push({ ...item, category: 'Safe', chanceTier: 'Good Chance', badgeColor: '#059669' });
+      } else if (diff >= -2.0 && diff < 1.5) {
+        targetChoices.push({ ...item, category: 'Target', chanceTier: 'Moderate Chance', badgeColor: '#2563eb' });
       } else if (diff >= -6.0 && diff < -2.0) {
-        dreamChoices.push({ ...item, category: 'Dream', badgeColor: '#d97706' });
+        dreamChoices.push({ ...item, category: 'Dream', chanceTier: 'Low Chance', badgeColor: '#d97706' });
       }
     }
 
     // Sort target choices by closest difference
     targetChoices.sort((a, b) => Math.abs(a.difference) - Math.abs(b.difference));
-    safeChoices.sort((a, b) => b.historicalCutoff - a.historicalCutoff);
-    dreamChoices.sort((a, b) => b.historicalCutoff - a.historicalCutoff);
+    safeChoices.sort((a, b) => b.difference - a.difference);
+    dreamChoices.sort((a, b) => b.difference - a.difference);
 
     return res.status(200).json({
       success: true,
@@ -138,9 +158,9 @@ export const getSmartSuggestions = async (req, res, next) => {
           targetCount: targetChoices.length,
           dreamCount: dreamChoices.length,
         },
-        safeChoices: safeChoices.slice(0, 15),
-        targetChoices: targetChoices.slice(0, 15),
-        dreamChoices: dreamChoices.slice(0, 15),
+        safeChoices: safeChoices.slice(0, 20),
+        targetChoices: targetChoices.slice(0, 20),
+        dreamChoices: dreamChoices.slice(0, 20),
       },
     });
   } catch (error) {
@@ -174,7 +194,7 @@ export const runSimulation = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'At least one preference choice is required to run the simulation.' });
     }
 
-    const cutoffField = getCutoffField(community);
+    const normCommunity = (community || 'BC').toUpperCase().trim();
 
     // Special category cutoff margin adjustment (educational estimate)
     let specialBonus = 0;
@@ -195,7 +215,7 @@ export const runSimulation = async (req, res, next) => {
       const pref = preferences[i];
       const priority = i + 1;
 
-      // 1. Fetch multi-year cutoffs (2021-2025) for this college & department
+      // 1. Fetch multi-year cutoffs (2021-2026) for this college & department
       const cutoffHistory = await TneaCutoff.find({
         collegeCode: pref.collegeCode,
         departmentCode: pref.departmentCode,
@@ -204,17 +224,19 @@ export const runSimulation = async (req, res, next) => {
         .sort({ academicYear: 1 })
         .lean();
 
-      // Extract 5-year cutoff points for the community
-      const fiveYearHistory = cutoffHistory.map((c) => ({
-        year: c.academicYear,
-        cutoff: c[cutoffField] || c.ocCutoff,
-        dataType: c.dataType || 'DEMO',
-        source: c.source,
-      }));
+      // Extract cutoff points strictly for the community
+      const fiveYearHistory = cutoffHistory
+        .map((c) => ({
+          year: c.academicYear,
+          cutoff: getCommunityCutoff(c, normCommunity),
+          dataType: c.dataType || 'DEMO',
+          source: c.source,
+        }))
+        .filter((h) => h.cutoff !== null);
 
       // Find current reference cutoff (2025 or latest)
       const currentRecord = cutoffHistory.find((c) => c.academicYear === Number(academicYear)) || cutoffHistory[cutoffHistory.length - 1];
-      const historicalCutoff = currentRecord ? currentRecord[cutoffField] || currentRecord.ocCutoff : 180.0;
+      const historicalCutoff = currentRecord ? getCommunityCutoff(currentRecord, normCommunity) ?? 180.0 : 180.0;
 
       // Calculate 5-year statistics
       let fiveYearAverage = historicalCutoff;

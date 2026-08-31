@@ -361,7 +361,40 @@ const tneaCollegeSchema = new mongoose.Schema(
       mgmtQuotaEstimatedFee: { type: Number, default: 135000 },
     },
 
+    // TNEA Counselling Participation Status
+    tneaParticipationStatus: {
+      type: String,
+      enum: ['TNEA', 'NOT_TNEA', 'UNKNOWN'],
+      default: 'TNEA',
+      index: true,
+    },
+
+    // University Field
+    university: {
+      type: String,
+      default: 'Anna University, Chennai',
+      index: true,
+    },
+
     // Data Provenance & Verification
+    sourceName: {
+      type: String,
+      default: 'Directorate of Technical Education (DOTE) / TNEA Official Info Booklet',
+    },
+    sourceDocument: {
+      type: String,
+      default: 'TNEA Engineering Admissions Official Information Brochure',
+    },
+    sourceYear: {
+      type: Number,
+      default: 2025,
+    },
+    dataStatus: {
+      type: String,
+      enum: ['VERIFIED', 'PARTIAL', 'UNAVAILABLE'],
+      default: 'VERIFIED',
+      index: true,
+    },
     educationBranch: {
       type: String,
       default: 'Engineering',
@@ -396,12 +429,29 @@ const tneaCollegeSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+// Virtual aliases for strict field compatibility
+tneaCollegeSchema.virtual('collegeCode').get(function () {
+  return this.code;
+});
+tneaCollegeSchema.virtual('collegeName').get(function () {
+  return this.name;
+});
+tneaCollegeSchema.virtual('autonomousStatus').get(function () {
+  return this.isAutonomous ? 'Autonomous' : 'Non-Autonomous';
+});
+tneaCollegeSchema.virtual('pincode').get(function () {
+  return this.pinCode;
+});
 
 // Search text index on name, code, district, city, shortName
 tneaCollegeSchema.index({ name: 'text', code: 'text', district: 'text', city: 'text', shortName: 'text' });
 tneaCollegeSchema.index({ district: 1, collegeType: 1 });
+tneaCollegeSchema.index({ tneaParticipationStatus: 1, dataStatus: 1 });
 tneaCollegeSchema.index({ dataCompleteness: -1 });
 
 const TneaCollege = mongoose.model('TneaCollege', tneaCollegeSchema);

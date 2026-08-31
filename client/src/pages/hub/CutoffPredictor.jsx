@@ -526,14 +526,35 @@ export const CutoffPredictor = () => {
                           </div>
 
                           <div style={{ backgroundColor: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '0.75rem' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Branch:</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Branch:</div>
+                              <span style={{ backgroundColor: '#f1f5f9', color: '#334155', fontSize: '0.72rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                                {item.selectedCategory || item.community} Quota
+                              </span>
+                            </div>
                             <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2563eb' }}>
                               {item.departmentCode} - {item.departmentName}
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.35rem', fontSize: '0.78rem', color: '#475569' }}>
-                              <span>Historical Cutoff: <strong>{item.historicalCutoff.toFixed(2)}</strong></span>
-                              <span>Your Score: <strong>{item.studentCutoff.toFixed(2)}</strong></span>
+                              <span>Historical {item.selectedCategory || item.community} Cutoff: <strong>{item.historicalCutoff !== null && item.historicalCutoff !== undefined ? Number(item.historicalCutoff).toFixed(2) : 'Official value unavailable'}</strong></span>
+                              <span>Your Score: <strong>{Number(item.studentCutoff).toFixed(2)}</strong></span>
                             </div>
+                            {item.expectedCutoffRange && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.35rem', fontSize: '0.75rem', color: '#64748b', borderTop: '1px dashed #e2e8f0', paddingTop: '0.35rem' }}>
+                                <span>Expected Range: <strong>{item.expectedCutoffRange.display || 'Official value unavailable'}</strong></span>
+                                <span>Best Round: <strong>{item.bestCounsellingRound || 'Round 1'}</strong></span>
+                              </div>
+                            )}
+                            {item.historicalCutoffTrend && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.75rem', color: '#64748b' }}>
+                                <span>5-Yr Trend: <strong>{item.historicalCutoffTrend || 'Insufficient verified data'}</strong></span>
+                              </div>
+                            )}
+                            {item.recommendationReason && (
+                              <div style={{ marginTop: '0.45rem', fontSize: '0.74rem', color: '#334155', backgroundColor: '#f8fafc', padding: '0.35rem 0.5rem', borderRadius: '4px', fontStyle: 'italic' }}>
+                                {item.recommendationReason}
+                              </div>
+                            )}
                           </div>
                         </div>
 

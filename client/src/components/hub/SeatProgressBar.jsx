@@ -1,7 +1,10 @@
 import React from 'react';
 
-export const SeatProgressBar = ({ total, filled, available, label, showNumbers = true, height = 8 }) => {
-  const percentage = total > 0 ? Math.min(100, Math.round((filled / total) * 100)) : 0;
+export const SeatProgressBar = ({ total, intake, filled = 0, available, label, showNumbers = true, height = 8 }) => {
+  const totalSeats = total ?? intake ?? 0;
+  const filledSeats = filled ?? 0;
+  const availableSeats = available ?? Math.max(0, totalSeats - filledSeats);
+  const percentage = totalSeats > 0 ? Math.min(100, Math.round((filledSeats / totalSeats) * 100)) : 0;
 
   // Determine color based on saturation
   let barColor = '#10b981'; // green if plenty available (< 60%)

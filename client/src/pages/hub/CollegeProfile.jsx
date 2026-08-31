@@ -486,38 +486,44 @@ export const CollegeProfile = () => {
               </div>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
-                    <th style={{ padding: '0.65rem 0.85rem' }}>Branch</th>
-                    <th style={{ padding: '0.65rem 0.85rem' }}>OC Cutoff</th>
-                    <th style={{ padding: '0.65rem 0.85rem' }}>BC Cutoff</th>
-                    <th style={{ padding: '0.65rem 0.85rem' }}>BCM Cutoff</th>
-                    <th style={{ padding: '0.65rem 0.85rem' }}>MBC Cutoff</th>
-                    <th style={{ padding: '0.65rem 0.85rem' }}>SC Cutoff</th>
-                    <th style={{ padding: '0.65rem 0.85rem' }}>SCA Cutoff</th>
-                    <th style={{ padding: '0.65rem 0.85rem' }}>ST Cutoff</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCutoffs.map((c, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '0.75rem 0.85rem', fontWeight: 800, color: '#0f172a' }}>
-                        {c.departmentName} ({c.departmentCode})
-                      </td>
-                      <td style={{ padding: '0.75rem 0.85rem', fontWeight: 800, color: '#2563eb' }}>{c.ocCutoff?.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 0.85rem' }}>{c.bcCutoff?.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 0.85rem' }}>{c.bcmCutoff?.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 0.85rem' }}>{c.mbcCutoff?.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 0.85rem' }}>{c.scCutoff?.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 0.85rem' }}>{c.scaCutoff?.toFixed(2)}</td>
-                      <td style={{ padding: '0.75rem 0.85rem' }}>{c.stCutoff?.toFixed(2)}</td>
+            {filteredCutoffs.length === 0 ? (
+              <div style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>Cutoff data not available for this selection.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>Branch</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>OC Cutoff</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>BC Cutoff</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>BCM Cutoff</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>MBC Cutoff</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>SC Cutoff</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>SCA Cutoff</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>ST Cutoff</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredCutoffs.map((c, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.75rem 0.85rem', fontWeight: 800, color: '#0f172a' }}>
+                          {c.departmentName} ({c.departmentCode})
+                        </td>
+                        <td style={{ padding: '0.75rem 0.85rem', fontWeight: 800, color: '#2563eb' }}>{c.ocCutoff?.toFixed(2)}</td>
+                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.bcCutoff?.toFixed(2)}</td>
+                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.bcmCutoff?.toFixed(2)}</td>
+                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.mbcCutoff?.toFixed(2)}</td>
+                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.scCutoff?.toFixed(2)}</td>
+                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.scaCutoff?.toFixed(2)}</td>
+                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.stCutoff?.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -566,23 +572,30 @@ export const CollegeProfile = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {filteredSeats.map((seat, i) => (
-                <div key={i} style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{seat.departmentName} ({seat.departmentCode})</strong>
-                    <span style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 800 }}>
-                      {seat.totalAvailable} Available / {seat.totalIntake} Seats
-                    </span>
+            {filteredSeats.length === 0 ? (
+              <div style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>Seat matrix information is not available for this quota.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {filteredSeats.map((seat, i) => (
+                  <div key={i} style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{seat.departmentName} ({seat.departmentCode})</strong>
+                      <span style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 800 }}>
+                        {seat.totalAvailable} Available / {seat.totalIntake} Seats
+                      </span>
+                    </div>
+                    <SeatProgressBar
+                      total={seat.totalIntake}
+                      intake={seat.totalIntake}
+                      filled={seat.totalFilled}
+                      available={seat.totalAvailable}
+                    />
                   </div>
-                  <SeatProgressBar
-                    filled={seat.totalFilled}
-                    available={seat.totalAvailable}
-                    intake={seat.totalIntake}
-                  />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
