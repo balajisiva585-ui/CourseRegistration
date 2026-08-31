@@ -236,7 +236,7 @@ export const deleteCollege = async (req, res) => {
 
 export const getDepartments = async (req, res) => {
   try {
-    const departments = await TneaDepartment.find({ isActive: true }).sort({ name: 1 });
+    const departments = await TneaDepartment.find({ isActive: { $ne: false } }).sort({ name: 1 });
     res.json({ success: true, data: departments });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
