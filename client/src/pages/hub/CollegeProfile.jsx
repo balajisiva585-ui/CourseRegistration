@@ -468,62 +468,118 @@ export const CollegeProfile = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
               <div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Historical TNEA Cutoff Trends (2021–2026)
+                  Historical TNEA Cutoff Trends
                 </h3>
-                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>Normalized marks out of 200 by category</div>
+                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                  Verified Directorate of Technical Education (DOTE) closing ranks & cutoffs out of 200
+                </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <select
                   value={cutoffYear}
                   onChange={(e) => setCutoffYear(e.target.value)}
                   style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', fontWeight: 700 }}
                 >
-                  {[2026, 2025, 2024, 2023, 2022, 2021].map((y) => (
+                  {[2025, 2024, 2023, 2022, 2021, 2026].map((y) => (
                     <option key={y} value={y}>Academic Year {y}</option>
                   ))}
+                </select>
+
+                <select
+                  value={cutoffRound}
+                  onChange={(e) => setCutoffRound(e.target.value)}
+                  style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', fontWeight: 700 }}
+                >
+                  <option value="Round 1">Round 1</option>
+                  <option value="Round 2">Round 2</option>
+                  <option value="Round 3">Round 3</option>
                 </select>
               </div>
             </div>
 
-            {filteredCutoffs.length === 0 ? (
-              <div style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <p style={{ margin: 0, fontWeight: 600 }}>Cutoff data not available for this selection.</p>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>Branch</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>OC Cutoff</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>BC Cutoff</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>BCM Cutoff</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>MBC Cutoff</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>SC Cutoff</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>SCA Cutoff</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>ST Cutoff</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCutoffs.map((c, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.75rem 0.85rem', fontWeight: 800, color: '#0f172a' }}>
-                          {c.departmentName} ({c.departmentCode})
-                        </td>
-                        <td style={{ padding: '0.75rem 0.85rem', fontWeight: 800, color: '#2563eb' }}>{c.ocCutoff?.toFixed(2)}</td>
-                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.bcCutoff?.toFixed(2)}</td>
-                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.bcmCutoff?.toFixed(2)}</td>
-                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.mbcCutoff?.toFixed(2)}</td>
-                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.scCutoff?.toFixed(2)}</td>
-                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.scaCutoff?.toFixed(2)}</td>
-                        <td style={{ padding: '0.75rem 0.85rem' }}>{c.stCutoff?.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {Number(cutoffYear) === 2026 && (
+              <div style={{ padding: '1rem 1.25rem', marginBottom: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', color: '#1e40af', fontSize: '0.85rem' }}>
+                ℹ️ <strong>Official 2026 closing cutoffs are not yet released</strong> by DOTE. Historical official records (2021–2025) are verified and available below.
               </div>
             )}
+
+            {(() => {
+              const depts = (college.departments && college.departments.length > 0)
+                ? college.departments.map(d => ({
+                    code: d.departmentCode || d.code,
+                    name: d.departmentName || d.name,
+                  }))
+                : [...new Set((college.cutoffs || []).map(c => c.departmentCode))].map(code => {
+                    const match = (college.cutoffs || []).find(c => c.departmentCode === code);
+                    return { code, name: match?.departmentName || code };
+                  });
+
+              const targetRoundNum = cutoffRound === 'Round 2' ? 2 : (cutoffRound === 'Round 3' ? 3 : 1);
+
+              if (depts.length === 0) {
+                return (
+                  <div style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <p style={{ margin: 0, fontWeight: 600 }}>Cutoff data not available for this selection.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
+                        <th style={{ padding: '0.65rem 0.85rem' }}>Branch</th>
+                        <th style={{ padding: '0.65rem 0.85rem' }}>OC Cutoff</th>
+                        <th style={{ padding: '0.65rem 0.85rem' }}>BC Cutoff</th>
+                        <th style={{ padding: '0.65rem 0.85rem' }}>BCM Cutoff</th>
+                        <th style={{ padding: '0.65rem 0.85rem' }}>MBC Cutoff</th>
+                        <th style={{ padding: '0.65rem 0.85rem' }}>SC Cutoff</th>
+                        <th style={{ padding: '0.65rem 0.85rem' }}>SCA Cutoff</th>
+                        <th style={{ padding: '0.65rem 0.85rem' }}>ST Cutoff</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {depts.map((d, i) => {
+                        const rec = (college.cutoffs || []).find(
+                          (c) =>
+                            c.academicYear === Number(cutoffYear) &&
+                            (c.round === cutoffRound || c.counsellingRound === targetRoundNum) &&
+                            (c.departmentCode === d.code || c.branchCode === d.code)
+                        );
+
+                        const formatCell = (val, isPrimary = false) => {
+                          if (val === null || val === undefined || isNaN(val)) {
+                            return <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.8rem' }}>Unavailable</span>;
+                          }
+                          return (
+                            <span style={{ fontWeight: isPrimary ? 800 : 600, color: isPrimary ? '#2563eb' : '#0f172a' }}>
+                              {Number(val).toFixed(2)}
+                            </span>
+                          );
+                        };
+
+                        return (
+                          <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '0.75rem 0.85rem', fontWeight: 800, color: '#0f172a' }}>
+                              {d.name} ({d.code})
+                            </td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.ocCutoff, true)}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.bcCutoff)}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.bcmCutoff)}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.mbcCutoff)}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.scCutoff)}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.scaCutoff)}</td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>{formatCell(rec?.stCutoff)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 

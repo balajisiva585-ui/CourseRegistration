@@ -14,10 +14,10 @@ export const HubFooter = () => {
               <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'linear-gradient(135deg, #2563eb, #0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
                 <GraduationCap size={20} />
               </div>
-              <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.15rem' }}>TNEA College Hub</span>
+              <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.15rem' }}>Smart Course Registration & Academic Planning</span>
             </div>
             <p style={{ fontSize: '0.85rem', lineHeight: 1.6, color: '#94a3b8', marginBottom: '1.25rem' }}>
-              Tamil Nadu's modern centralized portal for engineering college exploration, historical TNEA cutoff trends, category seat availability matrices, and student decision support.
+              Tamil Nadu's modern centralized platform for engineering course registration, academic planning, college exploration, historical TNEA cutoff trends, category seat availability matrices, and student decision support.
             </p>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#1e293b', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', color: '#38bdf8' }}>
               <ShieldAlert size={14} />

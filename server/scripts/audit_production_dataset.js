@@ -47,6 +47,8 @@ export async function runComprehensiveAudit() {
   let syntheticCutoffs = 0;
   let invalidCollegeRefs = 0;
   let invalidDeptRefs = 0;
+  let impossibleCutoffValues = 0;
+  let recordsWithoutSource = 0;
 
   const compositeKeyMap = new Map();
   let duplicateCompositeKeys = 0;
@@ -77,7 +79,7 @@ export async function runComprehensiveAudit() {
       if (c.dataStatus === 'OFFICIAL') officialCutoffs++;
       else if (c.dataStatus === 'PROJECTED') projectedCutoffs++;
 
-      // Check if it exists in OFFICIAL_GROUND_TRUTH
+      // Check ground truth provenance for official historical years
       const colGt = OFFICIAL_GROUND_TRUTH[c.collegeCode];
       const branchGt = colGt?.branches?.[c.departmentCode];
       const cutoffGt = branchGt?.cutoffs?.[String(c.academicYear)];
@@ -86,6 +88,22 @@ export async function runComprehensiveAudit() {
       if (c.academicYear <= 2025 && !roundGt && c.dataStatus === 'OFFICIAL') {
         syntheticCutoffs++;
       }
+    }
+
+    // Check source provenance and impossible cutoff values
+    if (c.dataStatus === 'OFFICIAL') {
+      const cats = [c.ocCutoff, c.bcCutoff, c.bcmCutoff, c.mbcCutoff, c.scCutoff, c.scaCutoff, c.stCutoff];
+      for (const val of cats) {
+        if (val !== null && val !== undefined) {
+          if (val < 50 || val > 200) {
+            impossibleCutoffValues++;
+          }
+        }
+      }
+    }
+
+    if (!c.source && !c.sourceUrl) {
+      recordsWithoutSource++;
     }
   }
 
@@ -96,6 +114,8 @@ export async function runComprehensiveAudit() {
   console.log(`   - Duplicate Composite Keys: ${duplicateCompositeKeys}`);
   console.log(`   - Cutoffs with Invalid College References: ${invalidCollegeRefs}`);
   console.log(`   - Cutoffs with Invalid Branch References: ${invalidDeptRefs}`);
+  console.log(`   - Records with Impossible Cutoff Values (<50 or >200): ${impossibleCutoffValues}`);
+  console.log(`   - Records Without Source Provenance: ${recordsWithoutSource}`);
 
   // 4. Seat Matrix Audit
   const seats = await TneaSeatMatrix.find({}).lean();
@@ -103,8 +123,23 @@ export async function runComprehensiveAudit() {
   console.log(`   - Total Seat Matrix Records in DB: ${seats.length}`);
 
   console.log('\n========================================================================');
-  console.log('🏁 AUDIT COMPLETED');
+  console.log('🏁 AUDIT INTEGRITY ASSERTIONS');
   console.log('========================================================================');
+
+  let failedAssertions = [];
+  if (duplicateCompositeKeys > 0) failedAssertions.push(`Duplicate composite keys found: ${duplicateCompositeKeys}`);
+  if (syntheticCutoffs > 0) failedAssertions.push(`Synthetic cutoffs found: ${syntheticCutoffs}`);
+  if (invalidCollegeRefs > 0) failedAssertions.push(`Invalid college references: ${invalidCollegeRefs}`);
+  if (invalidDeptRefs > 0) failedAssertions.push(`Invalid branch references: ${invalidDeptRefs}`);
+  if (impossibleCutoffValues > 0) failedAssertions.push(`Impossible cutoff values: ${impossibleCutoffValues}`);
+
+  if (failedAssertions.length > 0) {
+    console.error('❌ PRODUCTION AUDIT FAILED with errors:');
+    failedAssertions.forEach((f) => console.error(`   - ${f}`));
+    process.exit(1);
+  } else {
+    console.log('✅ ALL PRODUCTION DATA INTEGRITY ASSERTIONS PASSED (0 FAILURES)');
+  }
 
   return {
     totalColleges: colleges.length,
@@ -118,6 +153,8 @@ export async function runComprehensiveAudit() {
     duplicateCompositeKeys,
     invalidCollegeRefs,
     invalidDeptRefs,
+    impossibleCutoffValues,
+    recordsWithoutSource,
     totalSeats: seats.length,
   };
 }

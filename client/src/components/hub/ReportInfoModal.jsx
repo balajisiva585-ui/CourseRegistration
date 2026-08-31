@@ -124,7 +124,7 @@ export const ReportInfoModal = ({ college, isOpen, onClose }) => {
               Report Submitted!
             </h3>
             <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-              Thank you for helping maintain data accuracy on the Tamil Nadu Engineering College Hub. Our administrative team will verify your submission against official DOTE / Anna University gazettes.
+              Thank you for helping maintain data accuracy on Smart Course Registration & Academic Planning. Our administrative team will verify your submission against official DOTE / Anna University gazettes.
             </p>
             <button
               onClick={handleResetAndClose}

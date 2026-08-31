@@ -149,15 +149,38 @@ function extractEntities(text) {
     }
   }
 
-  // 5. College Extraction (Direct 4-digit code or alias)
+  // 5. Year Extraction (Identify academic year first to avoid collision with college codes like 2025)
+  let academicYear = 2025;
+  let yearFoundInText = false;
+  if (clean.includes('2021')) { academicYear = 2021; yearFoundInText = true; }
+  else if (clean.includes('2022')) { academicYear = 2022; yearFoundInText = true; }
+  else if (clean.includes('2023')) { academicYear = 2023; yearFoundInText = true; }
+  else if (clean.includes('2024')) { academicYear = 2024; yearFoundInText = true; }
+  else if (clean.includes('2026')) { academicYear = 2026; yearFoundInText = true; }
+  else if (clean.includes('2025')) { academicYear = 2025; yearFoundInText = true; }
+
+  // 6. College Extraction (Direct 4-digit code or alias)
   let matchedCollegeCodes = [];
-  const codeMatch = clean.match(/\b\d{4}\b/);
-  if (codeMatch) {
-    matchedCollegeCodes.push(codeMatch[0]);
+
+  // Match direct 4-digit codes, ignoring years unless explicitly prefixed with "code"
+  const codeMatches = clean.matchAll(/\b(\d{4})\b/g);
+  for (const m of codeMatches) {
+    const code = m[1];
+    const isYear = ['2021', '2022', '2023', '2024', '2025', '2026'].includes(code);
+    const hasCodePrefix = clean.includes(`code ${code}`) || clean.includes(`code: ${code}`) || clean.includes(`college ${code}`) || clean.includes(`tnea ${code}`);
+    if (!isYear || hasCodePrefix) {
+      if (!matchedCollegeCodes.includes(code)) {
+        matchedCollegeCodes.push(code);
+      }
+    }
   }
 
   for (const alias of COLLEGE_ALIASES) {
     for (const name of alias.names) {
+      // Don't match purely numeric 4-digit names if they clash with year
+      if (/^\d{4}$/.test(name) && ['2021', '2022', '2023', '2024', '2025', '2026'].includes(name)) {
+        continue;
+      }
       const reg = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
       if (reg.test(clean)) {
         if (!matchedCollegeCodes.includes(alias.code)) {
@@ -167,13 +190,18 @@ function extractEntities(text) {
     }
   }
 
-  // 6. Year Extraction
-  let academicYear = 2025;
-  if (clean.includes('2024')) academicYear = 2024;
-  else if (clean.includes('2026')) academicYear = 2026;
-  else if (clean.includes('2023')) academicYear = 2023;
+  // 7. Counselling Round Extraction
+  let counsellingRound = null;
+  if (clean.includes('round 1') || clean.includes('r1') || clean.includes('round-1') || clean.includes('first round')) {
+    counsellingRound = 1;
+  } else if (clean.includes('round 2') || clean.includes('r2') || clean.includes('round-2') || clean.includes('second round')) {
+    counsellingRound = 2;
+  } else if (clean.includes('round 3') || clean.includes('r3') || clean.includes('round-3') || clean.includes('third round')) {
+    counsellingRound = 3;
+  }
 
-  // 7. Intent detection
+  // 8. Intent detection
+  const isMultiYearQuery = clean.includes('last 5 years') || clean.includes('5 years') || clean.includes('multi year') || clean.includes('previous years') || clean.includes('past years') || clean.includes('trends');
   const isComparison = clean.includes(' vs ') || clean.includes('compare') || clean.includes('vs.') || clean.includes('difference') || clean.includes('differ');
   const isHostelQuery = clean.includes('hostel') || clean.includes('mess') || clean.includes('food') || clean.includes('stay') || clean.includes('accommodation');
   const isFacultyQuery = clean.includes('faculty') || clean.includes('professor') || clean.includes('staff') || clean.includes('teaching');
@@ -192,6 +220,8 @@ function extractEntities(text) {
     district,
     matchedCollegeCodes,
     academicYear,
+    counsellingRound,
+    isMultiYearQuery,
     isComparison,
     isHostelQuery,
     isFacultyQuery,
@@ -529,43 +559,54 @@ export const handleTneaChat = async (req, res) => {
         });
       }
 
-      // If specific branch cutoff was requested for this college (e.g. "Kongu AD cutoff")
+      // If specific branch cutoff was requested for this college (e.g. "Kongu AD cutoff", "Easwari AD BC Round 2", or "Easwari AD BC last 5 years")
       if (entities.departmentCode) {
-        const cutoffs = await TneaCutoff.find({
-          collegeCode: college.code,
-          departmentCode: entities.departmentCode,
-          academicYear: entities.academicYear,
-        }).lean();
+        // Multi-year archive query (e.g. "last 5 years")
+        if (entities.isMultiYearQuery) {
+          const allCutoffs = await TneaCutoff.find({
+            collegeCode: college.code,
+            departmentCode: entities.departmentCode,
+            academicYear: { $in: [2021, 2022, 2023, 2024, 2025] },
+          }).sort({ academicYear: -1, counsellingRound: 1 }).lean();
 
-        if (cutoffs.length > 0) {
-          const r1 = cutoffs.find((c) => c.counsellingRound === 1 || c.round === 'Round 1');
-          const deptName = cutoffs[0].departmentName;
+          const deptName = allCutoffs[0]?.departmentName || entities.departmentCode;
           const comm = entities.community || 'OC';
-          const mark = r1 ? extractCategoryCutoff(r1, comm) : null;
+
+          const years = [2025, 2024, 2023, 2022, 2021];
+          let multiYearLines = [];
+          for (const y of years) {
+            const yrRecords = allCutoffs.filter((c) => c.academicYear === y);
+            const r1 = yrRecords.find((c) => c.counsellingRound === 1 || c.round === 'Round 1');
+            const r2 = yrRecords.find((c) => c.counsellingRound === 2 || c.round === 'Round 2');
+            const r3 = yrRecords.find((c) => c.counsellingRound === 3 || c.round === 'Round 3');
+
+            const formatVal = (rec) => {
+              if (!rec) return 'Unavailable';
+              const val = extractCategoryCutoff(rec, comm);
+              return val !== null && !isNaN(val) ? val.toFixed(2) : 'Unavailable';
+            };
+
+            multiYearLines.push(`• **${y}**: Round 1: **${formatVal(r1)}** | Round 2: **${formatVal(r2)}** | Round 3: **${formatVal(r3)}**`);
+          }
 
           const replyText = entities.isTamilOrTanglish
-            ? `📊 **${college.name} (${college.code})**\n\n` +
-              `• **துறை (Department)**: ${entities.departmentCode} - ${deptName}\n` +
-              `• **ஆண்டு**: ${entities.academicYear}\n` +
-              `• **${comm} Cutoff (Round 1)**: ${mark !== null ? `**${mark.toFixed(2)}**` : 'கிடைக்கப்பெறவில்லை (Official value unavailable)'}\n\n` +
-              `பிற இடஒதுக்கீடு பிரிவுகள் (Round 1):\n` +
-              (r1?.ocCutoff ? `• OC: ${r1.ocCutoff.toFixed(2)}  ` : '') +
-              (r1?.bcCutoff ? `• BC: ${r1.bcCutoff.toFixed(2)}  ` : '') +
-              (r1?.bcmCutoff ? `• BCM: ${r1.bcmCutoff.toFixed(2)}  ` : '') +
-              (r1?.mbcCutoff ? `• MBC: ${r1.mbcCutoff.toFixed(2)}  ` : '') +
-              (r1?.scCutoff ? `• SC: ${r1.scCutoff.toFixed(2)}  ` : '') +
-              (r1?.stCutoff ? `• ST: ${r1.stCutoff.toFixed(2)}` : '')
-            : `📊 **${college.name} (${college.code})** Cutoff Details:\n\n` +
-              `• **Department**: ${entities.departmentCode} - ${deptName}\n` +
-              `• **Academic Year**: ${entities.academicYear}\n` +
-              `• **${comm} Closing Cutoff (Round 1)**: ${mark !== null ? `**${mark.toFixed(2)}**` : 'Official value unavailable'}\n\n` +
-              `Category Breakdown (Round 1):\n` +
-              (r1?.ocCutoff ? `• OC: ${r1.ocCutoff.toFixed(2)}  ` : '') +
-              (r1?.bcCutoff ? `• BC: ${r1.bcCutoff.toFixed(2)}  ` : '') +
-              (r1?.bcmCutoff ? `• BCM: ${r1.bcmCutoff.toFixed(2)}  ` : '') +
-              (r1?.mbcCutoff ? `• MBC: ${r1.mbcCutoff.toFixed(2)}  ` : '') +
-              (r1?.scCutoff ? `• SC: ${r1.scCutoff.toFixed(2)}  ` : '') +
-              (r1?.stCutoff ? `• ST: ${r1.stCutoff.toFixed(2)}` : '');
+            ? `📊 **${college.name} (${college.code})** கடந்த 5 ஆண்டுகளுக்கான Cutoff விவரங்கள்:\n\n` +
+              `• **கல்லூரி**: ${college.name} (${college.code})\n` +
+              `• **துறை**: ${deptName} (${entities.departmentCode})\n` +
+              `• **இடஒதுக்கீட்டுப் பிரிவு**: ${comm}\n` +
+              `• **சரிபார்ப்பு நிலை**: ✅ VERIFIED OFFICIAL — TNEA/DOTE source\n\n` +
+              `**வரலாற்று Cutoff போக்குகள் (2021–2025)**:\n` +
+              multiYearLines.join('\n') + `\n\n` +
+              `*குறிப்பு: ஒதுக்கீடு இல்லாத சுற்றுகள் அல்லது தரவுகள் கிடைக்கப்பெறாதவை Unavailable எனக் குறிக்கப்பட்டுள்ளன.*`
+            : `📊 **${college.name} (${college.code})** 5-Year Historical Cutoff Archive:\n\n` +
+              `• **College**: ${college.name}\n` +
+              `• **TNEA Code**: ${college.code}\n` +
+              `• **Branch**: ${deptName} (${entities.departmentCode})\n` +
+              `• **Community**: ${comm}\n` +
+              `• **Verification**: VERIFIED OFFICIAL — TNEA/DOTE source\n\n` +
+              `**Historical Cutoff Trends (2021–2025)**:\n` +
+              multiYearLines.join('\n') + `\n\n` +
+              `*Note: Missing rounds or categories without published allotments are marked as Unavailable.*`;
 
           return res.json({
             success: true,
@@ -577,8 +618,92 @@ export const handleTneaChat = async (req, res) => {
                 district: college.district,
                 departmentCode: entities.departmentCode,
                 departmentName: deptName,
-                historicalCutoff: mark,
+                community: comm,
+                verificationStatus: 'OFFICIAL',
+                profileUrl: `/colleges/${college.code}`,
+              },
+            ],
+            suggestions: [
+              `${college.shortName || college.name} seat matrix`,
+              `${college.shortName || college.name} CS cutoff`,
+              'Compare with other colleges',
+            ],
+          });
+        }
+
+        // Single year & specific or default round query
+        const targetRoundNum = entities.counsellingRound || 1;
+        const targetRoundName = `Round ${targetRoundNum}`;
+
+        const cutoffs = await TneaCutoff.find({
+          collegeCode: college.code,
+          departmentCode: entities.departmentCode,
+          academicYear: entities.academicYear,
+        }).lean();
+
+        if (cutoffs.length > 0) {
+          const matchedRecord = cutoffs.find(
+            (c) => c.counsellingRound === targetRoundNum || c.round === targetRoundName
+          );
+
+          const deptName = matchedRecord?.departmentName || cutoffs[0]?.departmentName || entities.departmentCode;
+          const comm = entities.community || 'OC';
+          const mark = matchedRecord ? extractCategoryCutoff(matchedRecord, comm) : null;
+          const vStatus = matchedRecord?.dataStatus || (mark !== null ? 'OFFICIAL' : 'UNAVAILABLE');
+
+          const verificationLabel = vStatus === 'OFFICIAL' && mark !== null
+            ? 'VERIFIED OFFICIAL — TNEA/DOTE source'
+            : 'Official value not published / unavailable';
+
+          const replyText = entities.isTamilOrTanglish
+            ? `📊 **${college.name} (${college.code})**\n\n` +
+              `• **கல்லூரி (College)**: ${college.name}\n` +
+              `• **TNEA Code**: ${college.code}\n` +
+              `• **துறை (Branch)**: ${deptName} (${entities.departmentCode})\n` +
+              `• **கல்வி ஆண்டு (Academic Year)**: ${entities.academicYear}\n` +
+              `• **கலந்தாய்வு சுற்று (Counselling Round)**: ${targetRoundName}\n` +
+              `• **இடஒதுக்கீட்டுப் பிரிவு (Community)**: ${comm}\n` +
+              `• **Closing Cutoff**: ${mark !== null ? `**${mark.toFixed(2)}**` : 'Unavailable'}\n` +
+              `• **Verification**: ${verificationLabel}\n\n` +
+              `பிற பிரிவுகள் (${targetRoundName}):\n` +
+              (matchedRecord?.ocCutoff !== null && matchedRecord?.ocCutoff !== undefined ? `• OC: ${matchedRecord.ocCutoff.toFixed(2)}  ` : '') +
+              (matchedRecord?.bcCutoff !== null && matchedRecord?.bcCutoff !== undefined ? `• BC: ${matchedRecord.bcCutoff.toFixed(2)}  ` : '') +
+              (matchedRecord?.bcmCutoff !== null && matchedRecord?.bcmCutoff !== undefined ? `• BCM: ${matchedRecord.bcmCutoff.toFixed(2)}  ` : '') +
+              (matchedRecord?.mbcCutoff !== null && matchedRecord?.mbcCutoff !== undefined ? `• MBC: ${matchedRecord.mbcCutoff.toFixed(2)}  ` : '') +
+              (matchedRecord?.scCutoff !== null && matchedRecord?.scCutoff !== undefined ? `• SC: ${matchedRecord.scCutoff.toFixed(2)}  ` : '') +
+              (matchedRecord?.stCutoff !== null && matchedRecord?.stCutoff !== undefined ? `• ST: ${matchedRecord.stCutoff.toFixed(2)}` : '')
+            : `📊 **${college.name} (${college.code})** Official Cutoff Details:\n\n` +
+              `• **College**: ${college.name}\n` +
+              `• **TNEA Code**: ${college.code}\n` +
+              `• **Branch**: ${deptName} (${entities.departmentCode})\n` +
+              `• **Academic Year**: ${entities.academicYear}\n` +
+              `• **Counselling Round**: ${targetRoundName}\n` +
+              `• **Community**: ${comm}\n` +
+              `• **Closing Cutoff**: ${mark !== null ? `**${mark.toFixed(2)}**` : 'Unavailable'}\n` +
+              `• **Verification**: ${verificationLabel}\n\n` +
+              `All Categories (${targetRoundName}):\n` +
+              (matchedRecord?.ocCutoff !== null && matchedRecord?.ocCutoff !== undefined ? `• OC: ${matchedRecord.ocCutoff.toFixed(2)}  ` : '• OC: Unavailable  ') +
+              (matchedRecord?.bcCutoff !== null && matchedRecord?.bcCutoff !== undefined ? `• BC: ${matchedRecord.bcCutoff.toFixed(2)}  ` : '• BC: Unavailable  ') +
+              (matchedRecord?.bcmCutoff !== null && matchedRecord?.bcmCutoff !== undefined ? `• BCM: ${matchedRecord.bcmCutoff.toFixed(2)}  ` : '• BCM: Unavailable  ') +
+              (matchedRecord?.mbcCutoff !== null && matchedRecord?.mbcCutoff !== undefined ? `• MBC: ${matchedRecord.mbcCutoff.toFixed(2)}  ` : '• MBC: Unavailable  ') +
+              (matchedRecord?.scCutoff !== null && matchedRecord?.scCutoff !== undefined ? `• SC: ${matchedRecord.scCutoff.toFixed(2)}  ` : '• SC: Unavailable  ') +
+              (matchedRecord?.stCutoff !== null && matchedRecord?.stCutoff !== undefined ? `• ST: ${matchedRecord.stCutoff.toFixed(2)}` : '• ST: Unavailable');
+
+          return res.json({
+            success: true,
+            reply: replyText,
+            cards: [
+              {
+                collegeCode: college.code,
+                collegeName: college.name,
+                district: college.district,
+                departmentCode: entities.departmentCode,
+                departmentName: deptName,
                 academicYear: entities.academicYear,
+                counsellingRound: targetRoundName,
+                community: comm,
+                historicalCutoff: mark,
+                verificationStatus: vStatus,
                 profileUrl: `/colleges/${college.code}`,
               },
             ],

@@ -158,7 +158,7 @@ export const HubHome = () => {
           </div>
 
           <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: '1.25rem', color: '#ffffff' }}>
-            Tamil Nadu Engineering College Hub
+            Smart Course Registration & Academic Planning
           </h1>
 
           <p style={{ fontSize: 'clamp(1rem, 2vw, 1.2rem)', color: '#cbd5e1', maxWidth: '780px', margin: '0 auto 2.25rem', lineHeight: 1.6 }}>

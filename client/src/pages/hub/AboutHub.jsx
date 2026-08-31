@@ -43,7 +43,7 @@ export const AboutHub = () => {
             <span>Platform Overview & Methodology</span>
           </div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
-            About Tamil Nadu Engineering College Hub
+            About Smart Course Registration & Academic Planning
           </h1>
           <p style={{ fontSize: '1rem', color: '#64748b', maxWidth: '720px', margin: '0 auto', lineHeight: 1.6 }}>
             A modernized, student-centric central information repository designed to demystify TNEA cutoffs, seat matrices, and counselling choices for Tamil Nadu engineering aspirants.

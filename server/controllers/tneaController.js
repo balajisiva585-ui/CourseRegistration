@@ -455,6 +455,8 @@ export const predictCutoff = async (req, res) => {
       preferredDepartments = [],
       preferredDistricts = [],
       academicYear = 2025,
+      counsellingRound,
+      round,
       quota = 'Government',
     } = req.body;
 
@@ -468,6 +470,9 @@ export const predictCutoff = async (req, res) => {
 
     const normCommunity = (community || 'OC').toUpperCase().trim();
     const targetYear = Number(academicYear) || 2025;
+    const requestedRoundNum = counsellingRound
+      ? Number(counsellingRound)
+      : (round === 'Round 2' ? 2 : (round === 'Round 3' ? 3 : (round === 'Round 1' ? 1 : null)));
 
     // Build query criteria
     const query = {};
@@ -502,6 +507,7 @@ export const predictCutoff = async (req, res) => {
       cutoffMark: score,
       community: normCommunity,
       academicYear: targetYear,
+      counsellingRound: requestedRoundNum,
       preferredDepartments,
       preferredDistricts,
       mongoFilter: query,
@@ -569,32 +575,44 @@ export const predictCutoff = async (req, res) => {
       const r2Cutoff = r2Entry ? r2Entry.cutoff : null;
       const r3Cutoff = r3Entry ? r3Entry.cutoff : null;
 
-      // 3. Determine best counselling round based on student's score
+      // 3. Determine counselling round based on user selection or auto best fit
       let bestRound = 'Round 1';
       let benchmarkCutoff = r1Cutoff;
 
-      if (r1Cutoff !== null && score >= r1Cutoff - 1.5) {
+      if (requestedRoundNum === 1) {
         bestRound = 'Round 1';
         benchmarkCutoff = r1Cutoff;
-      } else if (r2Cutoff !== null && score >= r2Cutoff - 1.5) {
+      } else if (requestedRoundNum === 2) {
         bestRound = 'Round 2';
         benchmarkCutoff = r2Cutoff;
-      } else if (r3Cutoff !== null && score >= r3Cutoff - 2.0) {
+      } else if (requestedRoundNum === 3) {
         bestRound = 'Round 3';
         benchmarkCutoff = r3Cutoff;
       } else {
-        // Find the lowest round cutoff available
-        if (r3Cutoff !== null) {
-          bestRound = 'Round 3';
-          benchmarkCutoff = r3Cutoff;
-        } else if (r2Cutoff !== null) {
-          bestRound = 'Round 2';
-          benchmarkCutoff = r2Cutoff;
-        } else if (r1Cutoff !== null) {
+        // Auto best round mode based on student's score
+        if (r1Cutoff !== null && score >= r1Cutoff - 1.5) {
           bestRound = 'Round 1';
           benchmarkCutoff = r1Cutoff;
+        } else if (r2Cutoff !== null && score >= r2Cutoff - 1.5) {
+          bestRound = 'Round 2';
+          benchmarkCutoff = r2Cutoff;
+        } else if (r3Cutoff !== null && score >= r3Cutoff - 2.0) {
+          bestRound = 'Round 3';
+          benchmarkCutoff = r3Cutoff;
         } else {
-          benchmarkCutoff = categoryEntries[0].cutoff;
+          // Find the lowest round cutoff available
+          if (r3Cutoff !== null) {
+            bestRound = 'Round 3';
+            benchmarkCutoff = r3Cutoff;
+          } else if (r2Cutoff !== null) {
+            bestRound = 'Round 2';
+            benchmarkCutoff = r2Cutoff;
+          } else if (r1Cutoff !== null) {
+            bestRound = 'Round 1';
+            benchmarkCutoff = r1Cutoff;
+          } else {
+            benchmarkCutoff = categoryEntries[0].cutoff;
+          }
         }
       }
 

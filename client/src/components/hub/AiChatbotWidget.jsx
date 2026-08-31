@@ -16,7 +16,7 @@ export default function AiChatbotWidget() {
     {
       id: 'welcome-msg',
       sender: 'assistant',
-      text: `Hello! I am the **TNEA College AI Assistant**.\n\nI can help you explore Tamil Nadu engineering institutions, calculate cutoff feasibility, compare colleges, and inspect branch-specific cutoffs.\n\nAsk me anything in **English, தமிழ், or Tanglish**!`,
+      text: `Hello! I am the **TNEA AI Assistant** for Smart Course Registration & Academic Planning.\n\nI can help you explore Tamil Nadu engineering institutions, calculate cutoff feasibility, compare colleges, and inspect branch-specific cutoffs.\n\nAsk me anything in **English, தமிழ், or Tanglish**!`,
       cards: [],
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
