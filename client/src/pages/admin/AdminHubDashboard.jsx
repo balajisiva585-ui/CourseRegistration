@@ -755,8 +755,12 @@ export const AdminHubDashboard = () => {
                       <td style={{ padding: '0.6rem 0.85rem', fontWeight: 600 }}>{c.collegeName}</td>
                       <td style={{ padding: '0.6rem 0.85rem' }}>{c.departmentCode}</td>
                       <td style={{ padding: '0.6rem 0.85rem' }}>{c.round}</td>
-                      <td style={{ padding: '0.6rem 0.85rem', fontWeight: 800, color: '#2563eb' }}>{c.ocCutoff.toFixed(2)}</td>
-                      <td style={{ padding: '0.6rem 0.85rem' }}>{c.bcCutoff.toFixed(2)}</td>
+                      <td style={{ padding: '0.6rem 0.85rem', fontWeight: 800, color: '#2563eb' }}>
+                        {c.ocCutoff !== null && c.ocCutoff !== undefined && !isNaN(Number(c.ocCutoff)) ? Number(c.ocCutoff).toFixed(2) : 'Unavailable'}
+                      </td>
+                      <td style={{ padding: '0.6rem 0.85rem' }}>
+                        {c.bcCutoff !== null && c.bcCutoff !== undefined && !isNaN(Number(c.bcCutoff)) ? Number(c.bcCutoff).toFixed(2) : 'Unavailable'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

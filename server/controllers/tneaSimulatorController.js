@@ -74,6 +74,7 @@ export const calculateCutoff = async (req, res, next) => {
         maths: m,
         physics: p,
         chemistry: c,
+        cutoff: cutoff,
         engineeringCutoff: cutoff,
         maxMarks: 200,
         formula: 'Maths + (Physics / 2) + (Chemistry / 2)',

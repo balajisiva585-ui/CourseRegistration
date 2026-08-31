@@ -20,8 +20,11 @@ export const HistoricalCutoffChart = ({
   lowest = 181.0,
   community = 'BC',
 }) => {
-  // Format data points for Recharts
-  const chartData = (history || []).map((h) => ({
+  // Format data points for Recharts safely
+  const validHistory = (history || []).filter(
+    (h) => h && h.cutoff !== null && h.cutoff !== undefined && !isNaN(Number(h.cutoff))
+  );
+  const chartData = validHistory.map((h) => ({
     year: String(h.year),
     cutoff: Number(h.cutoff),
     student: Number(studentCutoff),

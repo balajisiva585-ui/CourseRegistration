@@ -196,7 +196,7 @@ export const SmartSuggestionsModal = ({
                     <div style={{ fontSize: '0.82rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 700, color: '#2563eb' }}>{item.departmentName} ({item.departmentCode})</span>
                       <span>• {item.district}</span>
-                      <span>• Historical Cutoff: <strong>{item.historicalCutoff.toFixed(2)}</strong></span>
+                      <span>• Historical Cutoff: <strong>{item.historicalCutoff !== null && item.historicalCutoff !== undefined && !isNaN(Number(item.historicalCutoff)) ? Number(item.historicalCutoff).toFixed(2) : 'Unavailable'}</strong></span>
                     </div>
                   </div>
 

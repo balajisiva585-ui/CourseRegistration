@@ -120,10 +120,14 @@ export const ChoiceListBuilder = ({
     onPreferencesChange(presetChoices);
   };
 
-  const filteredColleges = allColleges.filter((c) => {
+  const filteredColleges = (allColleges || []).filter((c) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
-    return c.name.toLowerCase().includes(term) || c.code.includes(term) || c.district.toLowerCase().includes(term);
+    return (
+      (c.name && c.name.toLowerCase().includes(term)) ||
+      (c.code && String(c.code).toLowerCase().includes(term)) ||
+      (c.district && c.district.toLowerCase().includes(term))
+    );
   });
 
   return (

@@ -75,24 +75,18 @@ export const CollegeCompare = () => {
     }
   };
 
-  // Extract CSE Cutoff helper
-  const getCseCutoff = (cutoffs) => {
-    const cse = (cutoffs || []).find((c) => c.departmentCode === 'CS');
-    if (!cse) return 'N/A';
-    return `${cse.ocCutoff.toFixed(2)} (OC) / ${cse.bcCutoff.toFixed(2)} (BC)`;
+  // Extract Branch Cutoff helper safely
+  const formatCutoffPair = (rec) => {
+    if (!rec) return 'Unavailable';
+    const oc = rec.ocCutoff !== null && rec.ocCutoff !== undefined && !isNaN(Number(rec.ocCutoff)) ? Number(rec.ocCutoff).toFixed(2) : '—';
+    const bc = rec.bcCutoff !== null && rec.bcCutoff !== undefined && !isNaN(Number(rec.bcCutoff)) ? Number(rec.bcCutoff).toFixed(2) : '—';
+    if (oc === '—' && bc === '—') return 'Unavailable';
+    return `${oc} (OC) / ${bc} (BC)`;
   };
 
-  const getAidsCutoff = (cutoffs) => {
-    const aids = (cutoffs || []).find((c) => c.departmentCode === 'AD');
-    if (!aids) return 'N/A';
-    return `${aids.ocCutoff.toFixed(2)} (OC) / ${aids.bcCutoff.toFixed(2)} (BC)`;
-  };
-
-  const getEceCutoff = (cutoffs) => {
-    const ece = (cutoffs || []).find((c) => c.departmentCode === 'EC');
-    if (!ece) return 'N/A';
-    return `${ece.ocCutoff.toFixed(2)} (OC) / ${ece.bcCutoff.toFixed(2)} (BC)`;
-  };
+  const getCseCutoff = (cutoffs) => formatCutoffPair((cutoffs || []).find((c) => c.departmentCode === 'CS'));
+  const getAidsCutoff = (cutoffs) => formatCutoffPair((cutoffs || []).find((c) => c.departmentCode === 'AD'));
+  const getEceCutoff = (cutoffs) => formatCutoffPair((cutoffs || []).find((c) => c.departmentCode === 'EC'));
 
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '1.5rem 0 4rem' }}>

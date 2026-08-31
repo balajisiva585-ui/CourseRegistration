@@ -925,25 +925,31 @@ export const TneaSimulator = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', backgroundColor: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '1rem', fontSize: '0.82rem' }}>
                       <div>
                         <span style={{ color: '#64748b' }}>Your Cutoff:</span>
-                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>{item.studentCutoff.toFixed(2)}</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                          {item.studentCutoff !== null && item.studentCutoff !== undefined && !isNaN(Number(item.studentCutoff)) ? Number(item.studentCutoff).toFixed(2) : '—'}
+                        </div>
                       </div>
 
                       <div>
                         <span style={{ color: '#64748b' }}>Latest Cutoff:</span>
-                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#2563eb' }}>{item.historicalCutoff.toFixed(2)}</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#2563eb' }}>
+                          {item.historicalCutoff !== null && item.historicalCutoff !== undefined && !isNaN(Number(item.historicalCutoff)) ? Number(item.historicalCutoff).toFixed(2) : 'Unavailable'}
+                        </div>
                       </div>
 
                       <div>
                         <span style={{ color: '#64748b' }}>Difference:</span>
-                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: item.difference >= 0 ? '#059669' : '#dc2626' }}>
-                          {item.difference >= 0 ? `+${item.difference.toFixed(2)}` : item.difference.toFixed(2)}
+                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: (item.difference || 0) >= 0 ? '#059669' : '#dc2626' }}>
+                          {item.difference !== null && item.difference !== undefined && !isNaN(Number(item.difference))
+                            ? (Number(item.difference) >= 0 ? `+${Number(item.difference).toFixed(2)}` : Number(item.difference).toFixed(2))
+                            : '—'}
                         </div>
                       </div>
 
                       <div>
                         <span style={{ color: '#64748b' }}>Available Seats:</span>
                         <div style={{ fontSize: '1.05rem', fontWeight: 800, color: item.availableSeats > 0 ? '#059669' : '#64748b' }}>
-                          {item.availableSeats > 0 ? `${item.availableSeats} Vacancies` : item.seatStatus}
+                          {item.availableSeats > 0 ? `${item.availableSeats} Vacancies` : (item.seatStatus || 'General Seat Allocation')}
                         </div>
                       </div>
                     </div>

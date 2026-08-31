@@ -4,7 +4,7 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error) {
@@ -13,15 +13,18 @@ export class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught a frontend rendering error:', error, errorInfo);
+    this.setState({ errorInfo });
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, errorInfo: null });
     window.location.reload();
   };
 
   render() {
     if (this.state.hasError) {
+      const isDev = import.meta.env?.DEV || process.env.NODE_ENV !== 'production';
+
       return (
         <div
           style={{
@@ -35,7 +38,7 @@ export class ErrorBoundary extends React.Component {
         >
           <div
             style={{
-              maxWidth: '520px',
+              maxWidth: isDev && this.state.error ? '800px' : '520px',
               width: '100%',
               backgroundColor: '#ffffff',
               borderRadius: '16px',
@@ -66,6 +69,55 @@ export class ErrorBoundary extends React.Component {
             <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.5, marginBottom: '1.75rem' }}>
               An unexpected error occurred while rendering this section. You can refresh the page or return to the home page.
             </p>
+
+            {isDev && this.state.error && (
+              <div
+                style={{
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  marginBottom: '1.5rem',
+                  textAlign: 'left',
+                  fontSize: '0.8rem',
+                  color: '#991b1b',
+                  overflowX: 'auto',
+                }}
+              >
+                <div style={{ fontWeight: 800, marginBottom: '0.4rem' }}>
+                  {this.state.error.name || 'Error'}: {this.state.error.message}
+                </div>
+                {this.state.error.stack && (
+                  <pre
+                    style={{
+                      margin: 0,
+                      fontFamily: 'monospace',
+                      fontSize: '0.75rem',
+                      whiteSpace: 'pre-wrap',
+                      color: '#b91c1c',
+                    }}
+                  >
+                    {this.state.error.stack}
+                  </pre>
+                )}
+                {this.state.errorInfo?.componentStack && (
+                  <details style={{ marginTop: '0.5rem', cursor: 'pointer' }}>
+                    <summary style={{ fontWeight: 700 }}>Component Stack</summary>
+                    <pre
+                      style={{
+                        marginTop: '0.3rem',
+                        fontFamily: 'monospace',
+                        fontSize: '0.7rem',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {this.state.errorInfo.componentStack}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <button
                 type="button"

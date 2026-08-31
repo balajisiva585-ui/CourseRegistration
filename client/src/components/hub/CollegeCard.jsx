@@ -11,6 +11,8 @@ export const CollegeCard = ({ college, onFavoriteToggle, isFavorited = false }) 
   const [favorite, setFavorite] = useState(isFavorited);
   const [savingFav, setSavingFav] = useState(false);
 
+  if (!college) return null;
+
   const compared = isCollegeCompared(college.code);
 
   const handleCompareClick = (e) => {
