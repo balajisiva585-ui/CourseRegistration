@@ -100,12 +100,53 @@ export const CutoffExplorer = () => {
     fetchCutoffsData();
   }, [year, collegeCode, collegeName, departmentCode, round, district, community, minCutoff, maxCutoff, sortBy, sortOrder, page]);
 
+  const isSeatsFilledRecord = (row) => {
+    if (!row) return false;
+    if (row.dataStatus === 'SEATS_FILLED' || row.status === 'SEATS_FILLED') return true;
+    const doc = String(row.sourceDocument || '').toLowerCase();
+    if (
+      doc.includes('vacancy matrix') ||
+      doc.includes('zero vacancies') ||
+      doc.includes('seats filled') ||
+      doc.includes('filled in round')
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   const formatCutoff = (row, communityKey) => {
     const val = getCutoffValue(row, communityKey);
-    if (val === null) {
-      return <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.8rem' }}>Unavailable</span>;
+    if (val !== null && val !== undefined && !isNaN(Number(val)) && Number(val) > 0) {
+      return Number(val).toFixed(2);
     }
-    return Number(val).toFixed(2);
+
+    if (isSeatsFilledRecord(row)) {
+      return (
+        <span
+          style={{
+            display: 'inline-block',
+            backgroundColor: '#f1f5f9',
+            color: '#475569',
+            fontSize: '0.74rem',
+            fontWeight: 600,
+            padding: '0.12rem 0.4rem',
+            borderRadius: '4px',
+            whiteSpace: 'nowrap',
+            border: '1px solid #e2e8f0',
+          }}
+          title="Seats were 100% allotted and filled in prior round (Zero vacancies)"
+        >
+          Seats Filled
+        </span>
+      );
+    }
+
+    return (
+      <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.78rem' }}>
+        Not Available
+      </span>
+    );
   };
 
   const formatRank = (val) => {
@@ -131,6 +172,15 @@ export const CutoffExplorer = () => {
   const handleExportCSV = () => {
     if (cutoffs.length === 0) return;
     const headers = ['Academic Year', 'College Code', 'College Name', 'District', 'Department', 'Round', 'OC Cutoff', 'BC Cutoff', 'BCM Cutoff', 'MBC Cutoff', 'SC Cutoff', 'SCA Cutoff', 'ST Cutoff', 'Closing Rank', 'Data Status'];
+
+    const getCsvCell = (row, key) => {
+      const val = getCutoffValue(row, key);
+      if (val !== null && val !== undefined && !isNaN(Number(val)) && Number(val) > 0) {
+        return Number(val).toFixed(2);
+      }
+      return isSeatsFilledRecord(row) ? 'Seats Filled' : 'Not Available';
+    };
+
     const rows = cutoffs.map((c) => [
       c.academicYear,
       c.collegeCode,
@@ -138,15 +188,15 @@ export const CutoffExplorer = () => {
       `"${c.district || ''}"`,
       c.departmentCode,
       c.round || `Round ${c.counsellingRound}`,
-      getCutoffValue(c, 'OC') !== null ? Number(getCutoffValue(c, 'OC')).toFixed(2) : 'Unavailable',
-      getCutoffValue(c, 'BC') !== null ? Number(getCutoffValue(c, 'BC')).toFixed(2) : 'Unavailable',
-      getCutoffValue(c, 'BCM') !== null ? Number(getCutoffValue(c, 'BCM')).toFixed(2) : 'Unavailable',
-      getCutoffValue(c, 'MBC') !== null ? Number(getCutoffValue(c, 'MBC')).toFixed(2) : 'Unavailable',
-      getCutoffValue(c, 'SC') !== null ? Number(getCutoffValue(c, 'SC')).toFixed(2) : 'Unavailable',
-      getCutoffValue(c, 'SCA') !== null ? Number(getCutoffValue(c, 'SCA')).toFixed(2) : 'Unavailable',
-      getCutoffValue(c, 'ST') !== null ? Number(getCutoffValue(c, 'ST')).toFixed(2) : 'Unavailable',
+      getCsvCell(c, 'OC'),
+      getCsvCell(c, 'BC'),
+      getCsvCell(c, 'BCM'),
+      getCsvCell(c, 'MBC'),
+      getCsvCell(c, 'SC'),
+      getCsvCell(c, 'SCA'),
+      getCsvCell(c, 'ST'),
       c.closingRank ?? '—',
-      c.dataStatus || 'OFFICIAL',
+      isSeatsFilledRecord(c) ? 'SEATS FILLED' : (c.dataStatus || 'OFFICIAL'),
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
@@ -528,13 +578,17 @@ export const CutoffExplorer = () => {
                             padding: '0.2rem 0.45rem',
                             borderRadius: '4px',
                             backgroundColor:
-                              Number(row.academicYear) === 2026 || row.dataStatus === 'PROJECTED'
+                              isSeatsFilledRecord(row)
+                                ? '#fef3c7'
+                                : Number(row.academicYear) === 2026 || row.dataStatus === 'PROJECTED'
                                 ? '#eff6ff'
                                 : row.dataStatus === 'OFFICIAL'
                                 ? '#ecfdf5'
                                 : '#f1f5f9',
                             color:
-                              Number(row.academicYear) === 2026 || row.dataStatus === 'PROJECTED'
+                              isSeatsFilledRecord(row)
+                                ? '#b45309'
+                                : Number(row.academicYear) === 2026 || row.dataStatus === 'PROJECTED'
                                 ? '#1d4ed8'
                                 : row.dataStatus === 'OFFICIAL'
                                 ? '#059669'
@@ -542,7 +596,13 @@ export const CutoffExplorer = () => {
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {Number(row.academicYear) === 2026 ? 'PROJECTED' : (row.dataStatus || 'OFFICIAL')}
+                          {isSeatsFilledRecord(row)
+                            ? 'SEATS FILLED'
+                            : Number(row.academicYear) === 2026 || row.dataStatus === 'PROJECTED'
+                            ? 'PROJECTED'
+                            : row.dataStatus === 'OFFICIAL'
+                            ? 'OFFICIAL'
+                            : (row.dataStatus || 'NOT AVAILABLE')}
                         </span>
                       </td>
                     </tr>
